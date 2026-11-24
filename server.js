@@ -1,9 +1,10 @@
 
 "use strict";
 
-// ==========================================
-// RS PAY - COMPLETE SERVER
-// ==========================================
+// ============================================
+// RS PAY - SERVER.JS
+// Existing MongoDB and existing service data
+// ============================================
 
 const express = require("express");
 const path = require("path");
@@ -19,15 +20,15 @@ const connectDatabase = require("./database");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProduction = process.env.NODE_ENV === "production";
+const production = process.env.NODE_ENV === "production";
 
-if (isProduction) {
+if (production) {
   app.set("trust proxy", 1);
 }
 
-// ==========================================
-// SECURITY AND BODY PARSER
-// ==========================================
+// ============================================
+// SECURITY
+// ============================================
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -58,13 +59,9 @@ app.use(express.urlencoded({
   limit: "20kb"
 }));
 
-// ==========================================
-// DATABASE MODELS
-// ==========================================
-
-// User Model
-// Email field রাখা হয়েছে পুরোনো ডাটাবেসের
-// compatibility বজায় রাখার জন্য।
+// ============================================
+// EXISTING DATABASE MODELS
+// ============================================
 
 const UserSchema = new mongoose.Schema({
   name: {
@@ -78,8 +75,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    maxlength: 14
+    trim: true
   },
 
   email: {
@@ -87,8 +83,7 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    maxlength: 150
+    trim: true
   },
 
   passwordHash: {
@@ -96,165 +91,67 @@ const UserSchema = new mongoose.Schema({
     required: true,
     select: false
   }
-
-}, { timestamps: true });
+}, {
+  timestamps: true,
+  strict: false
+});
 
 const User =
   mongoose.models.User ||
   mongoose.model("User", UserSchema);
 
 
-// Website Content Model
+// Existing service collection.
+// strict:false keeps any existing service fields.
 
-const SiteContentSchema = new mongoose.Schema({
-  key: {
-    type: String,
-    unique: true,
-    default: "main"
-  },
-
-  landing: {
-    title: {
-      type: String,
-      default: "পেমেন্ট, আরও সহজ।"
-    },
-
-    subtitle: {
-      type: String,
-      default: "মোবাইল রিচার্জ ও দৈনন্দিন বিল পেমেন্টের সেবাগুলো এক জায়গায় সাজানোর একটি স্মার্ট ডিজিটাল প্ল্যাটফর্ম।"
-    },
-
-    buttonText: {
-      type: String,
-      default: "শুরু করুন"
-    }
-  }
-
-}, { timestamps: true });
-
-const SiteContent =
-  mongoose.models.SiteContent ||
-  mongoose.model("SiteContent", SiteContentSchema);
-
-
-// Banner Model
-
-const BannerSchema = new mongoose.Schema({
-  slot: {
-    type: String,
-    enum: [
-      "landing_top",
-      "landing_middle",
-      "dashboard_home"
-    ],
-    unique: true,
-    required: true
-  },
-
-  title: {
-    type: String,
-    maxlength: 100,
-    default: ""
-  },
-
-  description: {
-    type: String,
-    maxlength: 400,
-    default: ""
-  },
-
-  imageUrl: {
-    type: String,
-    maxlength: 1000,
-    default: ""
-  },
-
-  linkUrl: {
-    type: String,
-    maxlength: 1000,
-    default: ""
-  },
-
-  buttonText: {
-    type: String,
-    maxlength: 40,
-    default: ""
-  },
-
-  enabled: {
-    type: Boolean,
-    default: false
-  }
-
-}, { timestamps: true });
-
-const Banner =
-  mongoose.models.Banner ||
-  mongoose.model("Banner", BannerSchema);
-
-
-// Service Category Model
-
-const ServiceSchema = new mongoose.Schema({
-  key: {
-    type: String,
-    unique: true,
-    required: true,
-    match: /^[a-z0-9_-]{2,40}$/
-  },
-
-  name: {
-    type: String,
-    required: true,
-    maxlength: 60
-  },
-
-  description: {
-    type: String,
-    maxlength: 180,
-    default: ""
-  },
-
-  icon: {
-    type: String,
-    maxlength: 8,
-    default: "◇"
-  },
-
-  enabled: {
-    type: Boolean,
-    default: true
-  },
-
-  order: {
-    type: Number,
-    default: 0
-  }
-
-}, { timestamps: true });
+const ServiceSchema = new mongoose.Schema({}, {
+  timestamps: true,
+  strict: false
+});
 
 const Service =
   mongoose.models.Service ||
   mongoose.model("Service", ServiceSchema);
 
 
-// ==========================================
-// SESSION SYSTEM
-// ==========================================
+// Existing banner collection.
 
-const sessionSecret =
-  process.env.SESSION_SECRET ||
-  (!isProduction
-    ? "local-development-only-change-this-secret"
-    : "");
+const BannerSchema = new mongoose.Schema({}, {
+  timestamps: true,
+  strict: false
+});
+
+const Banner =
+  mongoose.models.Banner ||
+  mongoose.model("Banner", BannerSchema);
+
+
+// Existing website content collection.
+
+const SiteContentSchema = new mongoose.Schema({}, {
+  timestamps: true,
+  strict: false
+});
+
+const SiteContent =
+  mongoose.models.SiteContent ||
+  mongoose.model("SiteContent", SiteContentSchema);
+
+
+// ============================================
+// SESSION
+// ============================================
+
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (production && (!sessionSecret || sessionSecret.length < 32)) {
+  throw new Error("SESSION_SECRET must contain at least 32 characters");
+}
 
 app.use(session({
   name: "rs_pay_session",
-
-  secret: sessionSecret,
-
+  secret: sessionSecret || "local-only-rs-pay-development-secret",
   resave: false,
-
   saveUninitialized: false,
 
   store: MongoStore.create({
@@ -266,43 +163,33 @@ app.use(session({
 
   cookie: {
     httpOnly: true,
-    secure: isProduction,
+    secure: production,
     sameSite: "lax",
     maxAge: 14 * 24 * 60 * 60 * 1000
   }
 }));
 
-
-// ==========================================
+// ============================================
 // RATE LIMIT
-// ==========================================
+// ============================================
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-  }
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "অনেকবার চেষ্টা হয়েছে। পরে আবার চেষ্টা করুন।"
-  }
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
-
-// ==========================================
-// REQUEST PROTECTION
-// ==========================================
+// ============================================
+// BASIC REQUEST PROTECTION
+// ============================================
 
 app.use((req, res, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
@@ -328,22 +215,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============================================
+// HELPERS
+// ============================================
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-function cleanText(value, maxLength) {
-  return String(value ?? "")
-    .trim()
-    .slice(0, maxLength);
+function clean(value, max = 200) {
+  return String(value ?? "").trim().slice(0, max);
 }
 
 function normalizePhone(value) {
   let digits = String(value || "")
-    .replace(/[০-৯]/g, digit =>
-      "০১২৩৪৫৬৭৮৯".indexOf(digit)
-    )
+    .replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d))
     .replace(/\D/g, "");
 
   if (digits.startsWith("00880")) {
@@ -358,11 +240,7 @@ function normalizePhone(value) {
     digits = "0" + digits;
   }
 
-  if (!/^01[3-9]\d{8}$/.test(digits)) {
-    return null;
-  }
-
-  return digits;
+  return /^01[3-9]\d{8}$/.test(digits) ? digits : null;
 }
 
 function requireAuth(req, res, next) {
@@ -387,23 +265,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function validWebUrl(value) {
-  if (!value) return "";
-
-  try {
-    const url = new URL(String(value));
-
-    if (!["https:", "http:"].includes(url.protocol)) {
-      return null;
-    }
-
-    return url.toString();
-
-  } catch {
-    return null;
-  }
-}
-
 function publicUser(user) {
   return {
     name: user.name,
@@ -411,22 +272,44 @@ function publicUser(user) {
   };
 }
 
+function validUrl(value) {
+  if (!value) return "";
 
-// ==========================================
+  try {
+    const url = new URL(String(value));
+
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function makeKey(value) {
+  return clean(value, 60)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || crypto.randomUUID();
+}
+
+// ============================================
 // USER REGISTRATION
-// First Name / Mobile Number / Password
-// ==========================================
+// First Name + Mobile + Password
+// ============================================
 
 app.post("/api/auth/register", authLimiter, async (req, res) => {
   try {
-    const name = cleanText(req.body.name, 60);
+    const name = clean(req.body.name, 60);
     const phone = normalizePhone(req.body.phone);
     const password = String(req.body.password || "");
 
     if (name.length < 2) {
       return res.status(400).json({
         success: false,
-        message: "আপনার নাম কমপক্ষে ২ অক্ষরের দিন।"
+        message: "সঠিক নাম লিখুন।"
       });
     }
 
@@ -444,25 +327,24 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ phone });
+    const exists = await User.findOne({ phone });
 
-    if (existingUser) {
+    if (exists) {
       return res.status(409).json({
         success: false,
-        message: "এই মোবাইল নম্বরে অ্যাকাউন্ট আগে থেকেই আছে।"
+        message: "এই নম্বরে অ্যাকাউন্ট আগে থেকেই আছে।"
       });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Internal unique email value preserves the
-    // existing required email database field.
-    const internalEmail = `${phone}@users.rs-pay.invalid`;
+    // Existing required email field compatibility.
+    const email = `${phone}@users.rs-pay.invalid`;
 
     const user = await User.create({
       name,
       phone,
-      email: internalEmail,
+      email,
       passwordHash
     });
 
@@ -483,26 +365,20 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: "এই মোবাইল নম্বরে অ্যাকাউন্ট আগে থেকেই আছে।"
-      });
-    }
+    console.error("Register error:", error);
 
-    console.error("Registration error:", error);
-
-    res.status(500).json({
+    res.status(error.code === 11000 ? 409 : 500).json({
       success: false,
-      message: "অ্যাকাউন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।"
+      message: error.code === 11000
+        ? "এই মোবাইল নম্বরে অ্যাকাউন্ট আছে।"
+        : "রেজিস্ট্রেশন সম্পন্ন হয়নি।"
     });
   }
 });
 
-
-// ==========================================
+// ============================================
 // USER LOGIN
-// ==========================================
+// ============================================
 
 app.post("/api/auth/login", authLimiter, async (req, res) => {
   try {
@@ -519,7 +395,8 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
     const user = await User.findOne({ phone })
       .select("+passwordHash");
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !user.passwordHash ||
+        !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({
         success: false,
         message: "মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়।"
@@ -547,15 +424,14 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "লগইন করা যায়নি। আবার চেষ্টা করুন।"
+      message: "লগইন করা যায়নি।"
     });
   }
 });
 
-
-// ==========================================
+// ============================================
 // CURRENT USER
-// ==========================================
+// ============================================
 
 app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
@@ -586,16 +462,15 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   }
 });
 
-
-// ==========================================
-// USER LOGOUT
-// ==========================================
+// ============================================
+// LOGOUT
+// ============================================
 
 app.post("/api/auth/logout", (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("rs_pay_session", {
       httpOnly: true,
-      secure: isProduction,
+      secure: production,
       sameSite: "lax"
     });
 
@@ -603,19 +478,18 @@ app.post("/api/auth/logout", (req, res) => {
   });
 });
 
-
-// ==========================================
-// ACCOUNT PROFILE UPDATE
-// ==========================================
+// ============================================
+// PROFILE UPDATE
+// ============================================
 
 app.put("/api/account/profile", requireAuth, async (req, res) => {
   try {
-    const name = cleanText(req.body.name, 60);
+    const name = clean(req.body.name, 60);
 
     if (name.length < 2) {
       return res.status(400).json({
         success: false,
-        message: "নাম কমপক্ষে ২ অক্ষরের হতে হবে।"
+        message: "সঠিক নাম লিখুন।"
       });
     }
 
@@ -647,25 +521,38 @@ app.put("/api/account/profile", requireAuth, async (req, res) => {
   }
 });
 
-
-// ==========================================
+// ============================================
 // PUBLIC WEBSITE CONTENT
-// ==========================================
+// Compatible with existing app.js
+// ============================================
 
 app.get("/api/site-content", async (req, res) => {
   try {
-    const content = await SiteContent.findOne({
-      key: "main"
-    }).lean();
+    const doc = await SiteContent.findOne().lean();
+
+    const content = doc || {};
 
     const banners = await Banner.find({
       enabled: true
     }).lean();
 
+    const mappedBanners = banners.map(b => ({
+      ...b,
+      slot: b.slot || b.position,
+      linkUrl: b.linkUrl || b.link || ""
+    }));
+
     res.json({
       success: true,
-      content: content || {},
-      banners
+      content: {
+        ...content,
+        landing: content.landing || {
+          title: content.heroTitle || "",
+          subtitle: content.heroSubtitle || "",
+          buttonText: content.buttonText || ""
+        }
+      },
+      banners: mappedBanners
     });
 
   } catch (error) {
@@ -673,23 +560,22 @@ app.get("/api/site-content", async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "ওয়েবসাইটের তথ্য লোড করা যায়নি।"
+      message: "ওয়েবসাইটের তথ্য লোড হয়নি।"
     });
   }
 });
 
-
-// ==========================================
-// PUBLIC SERVICE CATEGORIES
-// ==========================================
+// ============================================
+// EXISTING SERVICES
+// No new categories are inserted.
+// Existing collection data is preserved.
+// ============================================
 
 app.get("/api/services", async (req, res) => {
   try {
     const services = await Service.find({
-      enabled: true
-    })
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
+      enabled: { $ne: false }
+    }).sort({ order: 1, createdAt: 1 }).lean();
 
     res.json({
       success: true,
@@ -706,10 +592,9 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-
-// ==========================================
+// ============================================
 // ADMIN LOGIN
-// ==========================================
+// ============================================
 
 app.post("/api/admin/login", adminLimiter, (req, res) => {
   const expected = Buffer.from(
@@ -735,24 +620,16 @@ app.post("/api/admin/login", adminLimiter, (req, res) => {
     if (err) {
       return res.status(500).json({
         success: false,
-        message: "অ্যাডমিন সেশন তৈরি করা যায়নি।"
+        message: "অ্যাডমিন সেশন তৈরি হয়নি।"
       });
     }
 
     req.session.adminAuthenticated = true;
     req.session.cookie.maxAge = 8 * 60 * 60 * 1000;
 
-    res.json({
-      success: true,
-      message: "অ্যাডমিন লগইন সফল হয়েছে।"
-    });
+    res.json({ success: true });
   });
 });
-
-
-// ==========================================
-// ADMIN SESSION CHECK
-// ==========================================
 
 app.get("/api/admin/me", requireAdmin, (req, res) => {
   res.json({
@@ -761,16 +638,11 @@ app.get("/api/admin/me", requireAdmin, (req, res) => {
   });
 });
 
-
-// ==========================================
-// ADMIN LOGOUT
-// ==========================================
-
 app.post("/api/admin/logout", requireAdmin, (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("rs_pay_session", {
       httpOnly: true,
-      secure: isProduction,
+      secure: production,
       sameSite: "lax"
     });
 
@@ -778,79 +650,25 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
   });
 });
 
+// ============================================
+// ADMIN CONTENT
+// Matches existing admin.js:
+// /api/admin/content
+// ============================================
 
-// ==========================================
-// ADMIN DASHBOARD STATS
-// ==========================================
-
-app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+app.get("/api/admin/content", requireAdmin, async (req, res) => {
   try {
-    const [totalUsers, serviceCount, bannerCount] =
-      await Promise.all([
-        User.countDocuments(),
-        Service.countDocuments({ enabled: true }),
-        Banner.countDocuments({ enabled: true })
-      ]);
+    const doc = await SiteContent.findOne().lean() || {};
 
     res.json({
       success: true,
-      totalUsers,
-      serviceCount,
-      bannerCount
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Dashboard তথ্য পাওয়া যায়নি।"
-    });
-  }
-});
-
-
-// ==========================================
-// ADMIN USER LIST
-// ==========================================
-
-app.get("/api/admin/users", requireAdmin, async (req, res) => {
-  try {
-    const users = await User.find()
-      .select("name phone createdAt")
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
-
-    res.json({
-      success: true,
-      users
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "ইউজার তালিকা পাওয়া যায়নি।"
-    });
-  }
-});
-
-
-// ==========================================
-// ADMIN WEBSITE CONTENT
-// ==========================================
-
-app.get("/api/admin/site-content", requireAdmin, async (req, res) => {
-  try {
-    const content = await SiteContent.findOne({
-      key: "main"
-    }).lean();
-
-    res.json({
-      success: true,
-      content: content || {}
+      content: {
+        ...doc,
+        heroTitle:
+          doc.heroTitle || doc.landing?.title || "",
+        heroSubtitle:
+          doc.heroSubtitle || doc.landing?.subtitle || ""
+      }
     });
 
   } catch (error) {
@@ -863,32 +681,34 @@ app.get("/api/admin/site-content", requireAdmin, async (req, res) => {
   }
 });
 
-
-app.put("/api/admin/site-content", requireAdmin, async (req, res) => {
+app.put("/api/admin/content", requireAdmin, async (req, res) => {
   try {
-    const landing = req.body.landing || {};
+    const heroTitle = clean(req.body.heroTitle, 180);
+    const heroSubtitle = clean(req.body.heroSubtitle, 500);
 
-    const content = await SiteContent.findOneAndUpdate(
-      { key: "main" },
+    const doc = await SiteContent.findOneAndUpdate(
+      {},
       {
         $set: {
+          heroTitle,
+          heroSubtitle,
           landing: {
-            title: cleanText(landing.title, 100),
-            subtitle: cleanText(landing.subtitle, 400),
-            buttonText: cleanText(landing.buttonText, 40)
+            title: heroTitle,
+            subtitle: heroSubtitle
           }
         }
       },
       {
         new: true,
         upsert: true,
-        runValidators: true
+        runValidators: true,
+        setDefaultsOnInsert: true
       }
     );
 
     res.json({
       success: true,
-      content
+      content: doc
     });
 
   } catch (error) {
@@ -896,83 +716,67 @@ app.put("/api/admin/site-content", requireAdmin, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "কনটেন্ট সংরক্ষণ করা যায়নি।"
+      message: "কনটেন্ট সংরক্ষণ হয়নি।"
     });
   }
 });
 
-
-// ==========================================
+// ============================================
 // ADMIN BANNERS
-// ==========================================
+// Compatible with existing admin.js
+// ============================================
 
 app.get("/api/admin/banners", requireAdmin, async (req, res) => {
   try {
     const banners = await Banner.find()
-      .sort({ slot: 1 })
+      .sort({ createdAt: -1 })
       .lean();
 
-    res.json({
-      success: true,
-      banners
-    });
+    res.json({ success: true, banners });
 
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "ব্যানার পাওয়া যায়নি।"
+      message: "ব্যানার লোড হয়নি।"
     });
   }
 });
 
-
-app.put("/api/admin/banners/:slot", requireAdmin, async (req, res) => {
+app.post("/api/admin/banners", requireAdmin, async (req, res) => {
   try {
-    const allowedSlots = [
-      "landing_top",
-      "landing_middle",
-      "dashboard_home"
-    ];
+    const imageUrl = validUrl(req.body.imageUrl || "");
+    const link = validUrl(req.body.link || "");
 
-    if (!allowedSlots.includes(req.params.slot)) {
+    if (imageUrl === null || link === null) {
       return res.status(400).json({
         success: false,
-        message: "ব্যানারের অবস্থান সঠিক নয়।"
+        message: "সঠিক HTTP/HTTPS URL দিন।"
       });
     }
 
-    const imageUrl = validWebUrl(req.body.imageUrl || "");
-    const linkUrl = validWebUrl(req.body.linkUrl || "");
+    const position = clean(req.body.position, 40);
 
-    if (imageUrl === null || linkUrl === null) {
+    if (!["landing_top", "landing_middle", "dashboard_home"].includes(position)) {
       return res.status(400).json({
         success: false,
-        message: "শুধু HTTP বা HTTPS লিংক ব্যবহার করুন।"
+        message: "সঠিক Banner Position নির্বাচন করুন।"
       });
     }
 
-    const banner = await Banner.findOneAndUpdate(
-      { slot: req.params.slot },
-      {
-        $set: {
-          title: cleanText(req.body.title, 100),
-          description: cleanText(req.body.description, 400),
-          imageUrl,
-          linkUrl,
-          buttonText: cleanText(req.body.buttonText, 40),
-          enabled: req.body.enabled === true
-        }
-      },
-      {
-        new: true,
-        upsert: true,
-        runValidators: true
-      }
-    );
+    const banner = await Banner.create({
+      title: clean(req.body.title, 100),
+      description: clean(req.body.description, 300),
+      imageUrl,
+      link,
+      linkUrl: link,
+      position,
+      slot: position,
+      enabled: req.body.enabled === true
+    });
 
-    res.json({
+    res.status(201).json({
       success: true,
       banner
     });
@@ -982,59 +786,138 @@ app.put("/api/admin/banners/:slot", requireAdmin, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "ব্যানার সংরক্ষণ করা যায়নি।"
+      message: "ব্যানার তৈরি হয়নি।"
     });
   }
 });
 
-
-// ==========================================
-// ADMIN SERVICE MANAGEMENT
-// ==========================================
-
-app.get("/api/admin/services", requireAdmin, async (req, res) => {
+app.put("/api/admin/banners/:id", requireAdmin, async (req, res) => {
   try {
-    const services = await Service.find()
-      .sort({ order: 1 })
-      .lean();
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Banner ID সঠিক নয়।"
+      });
+    }
 
-    res.json({
-      success: true,
-      services
-    });
+    const imageUrl = validUrl(req.body.imageUrl || "");
+    const link = validUrl(req.body.link || "");
+
+    if (imageUrl === null || link === null) {
+      return res.status(400).json({
+        success: false,
+        message: "সঠিক HTTP/HTTPS URL দিন।"
+      });
+    }
+
+    const position = clean(req.body.position, 40);
+
+    if (!["landing_top", "landing_middle", "dashboard_home"].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        message: "সঠিক Banner Position নির্বাচন করুন।"
+      });
+    }
+
+    const banner = await Banner.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          title: clean(req.body.title, 100),
+          description: clean(req.body.description, 300),
+          imageUrl,
+          link,
+          linkUrl: link,
+          position,
+          slot: position,
+          enabled: req.body.enabled === true
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: "Banner পাওয়া যায়নি।"
+      });
+    }
+
+    res.json({ success: true, banner });
 
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "সার্ভিস তালিকা পাওয়া যায়নি।"
+      message: "Banner আপডেট হয়নি।"
     });
   }
 });
 
+app.delete("/api/admin/banners/:id", requireAdmin, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Banner ID সঠিক নয়।"
+      });
+    }
+
+    await Banner.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Banner মুছে ফেলা যায়নি।"
+    });
+  }
+});
+
+// ============================================
+// ADMIN SERVICES
+// Existing records are retained.
+// ============================================
+
+app.get("/api/admin/services", requireAdmin, async (req, res) => {
+  try {
+    const services = await Service.find()
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+
+    res.json({ success: true, services });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "সার্ভিস লোড হয়নি।"
+    });
+  }
+});
 
 app.post("/api/admin/services", requireAdmin, async (req, res) => {
   try {
-    const key = cleanText(req.body.key, 40).toLowerCase();
-    const name = cleanText(req.body.name, 60);
+    const name = clean(req.body.name, 80);
 
-    if (!/^[a-z0-9_-]{2,40}$/.test(key) || name.length < 2) {
+    if (name.length < 2) {
       return res.status(400).json({
         success: false,
-        message: "ক্যাটাগরির Key ও নাম সঠিকভাবে দিন।"
+        message: "সার্ভিসের নাম দিন।"
       });
     }
 
     const service = await Service.create({
-      key,
+      key: makeKey(name) + "-" + crypto.randomBytes(3).toString("hex"),
       name,
-      description: cleanText(req.body.description, 180),
-      icon: cleanText(req.body.icon || "◇", 8),
-      enabled: req.body.enabled !== false,
-      order: Number.isFinite(Number(req.body.order))
-        ? Number(req.body.order)
-        : 0
+      description: clean(req.body.description, 250),
+      icon: clean(req.body.icon || "◇", 8),
+      enabled: req.body.enabled !== false
     });
 
     res.status(201).json({
@@ -1043,48 +926,36 @@ app.post("/api/admin/services", requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    res.status(error.code === 11000 ? 409 : 400).json({
+    console.error(error);
+
+    res.status(500).json({
       success: false,
-      message: error.code === 11000
-        ? "এই Key আগে থেকেই আছে।"
-        : "ক্যাটাগরি তৈরি করা যায়নি।"
+      message: "সার্ভিস তৈরি হয়নি।"
     });
   }
 });
-
 
 app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
-        message: "ক্যাটাগরি ID সঠিক নয়।"
+        message: "Service ID সঠিক নয়।"
       });
     }
 
-    const update = {};
+    const update = {
+      name: clean(req.body.name, 80),
+      description: clean(req.body.description, 250),
+      icon: clean(req.body.icon || "◇", 8),
+      enabled: req.body.enabled === true
+    };
 
-    if (req.body.name !== undefined) {
-      update.name = cleanText(req.body.name, 60);
-    }
-
-    if (req.body.description !== undefined) {
-      update.description = cleanText(req.body.description, 180);
-    }
-
-    if (req.body.icon !== undefined) {
-      update.icon = cleanText(req.body.icon, 8);
-    }
-
-    if (req.body.enabled !== undefined) {
-      update.enabled = req.body.enabled === true;
-    }
-
-    if (
-      req.body.order !== undefined &&
-      Number.isFinite(Number(req.body.order))
-    ) {
-      update.order = Number(req.body.order);
+    if (update.name.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "সার্ভিসের নাম দিন।"
+      });
     }
 
     const service = await Service.findByIdAndUpdate(
@@ -1096,32 +967,28 @@ app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
     if (!service) {
       return res.status(404).json({
         success: false,
-        message: "ক্যাটাগরি পাওয়া যায়নি।"
+        message: "সার্ভিস পাওয়া যায়নি।"
       });
     }
 
-    res.json({
-      success: true,
-      service
-    });
+    res.json({ success: true, service });
 
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
       success: false,
-      message: "ক্যাটাগরি আপডেট করা যায়নি।"
+      message: "সার্ভিস আপডেট হয়নি।"
     });
   }
 });
-
 
 app.delete("/api/admin/services/:id", requireAdmin, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
-        message: "ক্যাটাগরি ID সঠিক নয়।"
+        message: "Service ID সঠিক নয়।"
       });
     }
 
@@ -1134,163 +1001,108 @@ app.delete("/api/admin/services/:id", requireAdmin, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "ক্যাটাগরি মুছে ফেলা যায়নি।"
+      message: "সার্ভিস মুছে ফেলা যায়নি।"
     });
   }
 });
 
+// ============================================
+// ADMIN USERS
+// ============================================
 
-// ==========================================
+app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("name phone email createdAt")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json({
+      success: true,
+      users: users.map(user => ({
+        ...user,
+        email: user.phone || user.email,
+        role: "user"
+      }))
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "ইউজার তালিকা পাওয়া যায়নি।"
+    });
+  }
+});
+
+// ============================================
 // HEALTH CHECK
-// ==========================================
+// ============================================
 
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "RS PAY",
-    database:
-      mongoose.connection.readyState === 1
-        ? "connected"
-        : "disconnected"
+    database: mongoose.connection.readyState === 1
+      ? "connected"
+      : "disconnected"
   });
 });
 
+// ============================================
+// STATIC WEBSITE
+// ============================================
 
-// ==========================================
-// STATIC WEBSITE FILES
-// ==========================================
-
-app.use(express.static(
-  path.join(__dirname, "public")
-));
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "public", "index.html")
-  );
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// ============================================
+// ERROR HANDLER
+// ============================================
 
-// ==========================================
-// DEFAULT WEBSITE DATA
-// ==========================================
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
 
-async function seedDefaults() {
-  if (!(await SiteContent.exists({ key: "main" }))) {
-    await SiteContent.create({
-      key: "main",
-      landing: {
-        title: "পেমেন্ট, আরও সহজ।",
-        subtitle: "মোবাইল রিচার্জ ও দৈনন্দিন বিল পেমেন্টের সেবাগুলো এক জায়গায় সাজানোর একটি স্মার্ট ডিজিটাল প্ল্যাটফর্ম।",
-        buttonText: "শুরু করুন"
-      }
-    });
-  }
+  res.status(500).json({
+    success: false,
+    message: "সার্ভারে সমস্যা হয়েছে।"
+  });
+});
 
-  if (await Service.countDocuments() === 0) {
-    await Service.insertMany([
-      {
-        key: "mobile",
-        name: "মোবাইল রিচার্জ",
-        description: "GP, Robi, Airtel, Banglalink ও Teletalk",
-        icon: "▣",
-        order: 1
-      },
-      {
-        key: "electricity",
-        name: "বিদ্যুৎ বিল",
-        description: "বিদ্যুৎ বিল পেমেন্টের সেবা বিভাগ",
-        icon: "ϟ",
-        order: 2
-      },
-      {
-        key: "gas",
-        name: "গ্যাস বিল",
-        description: "গ্যাস বিল পেমেন্টের সেবা বিভাগ",
-        icon: "♨",
-        order: 3
-      },
-      {
-        key: "water",
-        name: "পানি বিল",
-        description: "WASA ও পানি বিল পেমেন্ট",
-        icon: "◉",
-        order: 4
-      },
-      {
-        key: "internet",
-        name: "ইন্টারনেট বিল",
-        description: "ব্রডব্যান্ড ও ISP পেমেন্ট",
-        icon: "⌁",
-        order: 5
-      },
-      {
-        key: "tv",
-        name: "টিভি সার্ভিস",
-        description: "টিভি সাবস্ক্রিপশন বিভাগ",
-        icon: "▤",
-        order: 6
-      },
-      {
-        key: "education",
-        name: "শিক্ষা ফি",
-        description: "শিক্ষাপ্রতিষ্ঠানের ফি বিভাগ",
-        icon: "⌂",
-        order: 7
-      },
-      {
-        key: "more",
-        name: "আরও সেবা",
-        description: "ভবিষ্যতে নতুন সেবা যুক্ত হবে",
-        icon: "＋",
-        order: 8
-      }
-    ]);
-  }
-}
-
-
-// ==========================================
+// ============================================
 // START SERVER
-// ==========================================
+// ============================================
 
 async function startServer() {
   try {
-    if (
-      isProduction &&
-      (
-        !process.env.SESSION_SECRET ||
-        process.env.SESSION_SECRET.length < 32
-      )
-    ) {
-      throw new Error(
-        "SESSION_SECRET must be at least 32 characters in production"
-      );
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is missing");
     }
 
-    if (
-      !process.env.ADMIN_PASSWORD ||
-      process.env.ADMIN_PASSWORD.length < 12
-    ) {
+    if (!process.env.ADMIN_PASSWORD ||
+        process.env.ADMIN_PASSWORD.length < 12) {
       throw new Error(
-        "Set ADMIN_PASSWORD to a strong value of at least 12 characters"
+        "ADMIN_PASSWORD must contain at least 12 characters"
       );
     }
 
     await connectDatabase();
 
-    await seedDefaults();
-
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`RS PAY running on port ${PORT}`);
+      console.log("================================");
+      console.log("RS PAY SERVER STARTED");
+      console.log("PORT:", PORT);
+      console.log("DATABASE: CONNECTED");
+      console.log("================================");
     });
 
   } catch (error) {
-    console.error(
-      "Server startup failed:",
-      error.message
-    );
-
+    console.error("RS PAY STARTUP ERROR:", error.message);
     process.exit(1);
   }
 }
