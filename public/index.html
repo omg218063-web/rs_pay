@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="bn">
 <head>
@@ -7,99 +6,63 @@
   <meta name="theme-color" content="#10091f">
   <meta name="description" content="RS PAY - আপনার ডিজিটাল সেবার সহজ ঠিকানা।">
   <title>RS PAY | Digital Services</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 <div class="site-shell">
 
-  <!-- HEADER -->
   <header class="topbar">
     <a class="brand" href="#">
-      <span class="brand-mark">RS</span>
-      <span class="brand-pay">PAY</span>
+      <span class="brand-mark">RS</span><span class="brand-pay">PAY</span>
     </a>
-
-    <nav class="nav-links">
+    <nav class="nav-links" id="mainNav">
       <a href="#home">হোম</a>
       <a href="#services">সার্ভিস</a>
       <a href="#how">কীভাবে কাজ করে</a>
       <a href="#about">আমাদের সম্পর্কে</a>
     </nav>
-
     <div class="nav-actions">
       <button class="btn btn-ghost" data-open="login">লগইন</button>
       <button class="btn btn-gold" data-open="register">অ্যাকাউন্ট খুলুন</button>
     </div>
-
     <button class="mobile-menu" id="mobileMenu" aria-label="Menu">☰</button>
   </header>
 
-  <!-- LANDING PAGE -->
   <main id="landingView">
-
-    <!-- HERO -->
     <section class="hero" id="home">
       <div class="hero-glow"></div>
-
       <div class="hero-copy">
-        <div class="eyebrow">
-          <span class="pulse"></span>
-          WELCOME TO RS PAY
-        </div>
-
-        <h1 id="managedLandingTitle">
-          আপনার ডিজিটাল সেবার
-          <span>সহজ ঠিকানা</span>
-        </h1>
-
+        <div class="eyebrow"><span class="pulse"></span> WELCOME TO RS PAY</div>
+        <h1 id="managedLandingTitle">আপনার ডিজিটাল সেবার <span>সহজ ঠিকানা</span></h1>
         <p class="hero-text" id="managedLandingSubtitle">
           RS PAY-এর মাধ্যমে প্রয়োজনীয় ডিজিটাল সার্ভিসগুলো
           সহজে এক জায়গায় খুঁজে নিন। দ্রুত, সহজ ও সুন্দর
           ডিজিটাল অভিজ্ঞতা উপভোগ করুন।
         </p>
-
         <div class="hero-actions">
-          <button class="btn btn-gold btn-large" data-open="register" id="landingCta">
-            শুরু করুন →
-          </button>
-
-          <a href="#services" class="btn btn-outline btn-large">
-            সার্ভিস দেখুন
-          </a>
+          <button class="btn btn-gold btn-large" data-open="register" id="landingCta">শুরু করুন →</button>
+          <a href="#services" class="btn btn-outline btn-large">সার্ভিস দেখুন</a>
         </div>
-
         <div class="hero-trust">
-          <span>✦</span> সহজ ব্যবহার
-          <i></i>
+          <span>✦</span> সহজ ব্যবহার <i></i>
           <span>✦</span> এক জায়গায় ডিজিটাল সেবা
         </div>
       </div>
-
       <div class="hero-art">
         <div class="orbit orbit-one"></div>
         <div class="orbit orbit-two"></div>
-
         <div class="pay-card">
           <div class="pay-card-top">
             <div class="mini-brand">RS <b>PAY</b></div>
             <div class="card-chip">✦</div>
           </div>
-
           <div class="card-label">DIGITAL SERVICE PLATFORM</div>
           <div class="card-title">Smart Digital<br>Experience</div>
-
-          <div class="card-bottom">
-            <span>RS PAY</span>
-            <span class="card-dots">● ● ●</span>
-          </div>
+          <div class="card-bottom"><span>RS PAY</span><span class="card-dots">● ● ●</span></div>
         </div>
-
         <div class="float-pill pill-top">✦ সহজ ডিজিটাল সেবা</div>
         <div class="float-pill pill-bottom">◈ RS PAY Platform</div>
         <span class="hero-spark spark-a">✦</span>
@@ -107,46 +70,24 @@
       </div>
     </section>
 
-    <!-- LIVE STATISTICS -->
     <section class="stats-row" id="liveStatistics">
-      <div>
-        <strong id="statUsers">—</strong>
-        <span>নিবন্ধিত সদস্য</span>
-      </div>
-
-      <div>
-        <strong id="statServices">—</strong>
-        <span>মোট সার্ভিস</span>
-      </div>
-
-      <div>
-        <strong id="statActive">—</strong>
-        <span>সক্রিয় সার্ভিস</span>
-      </div>
-
-      <div>
-        <strong id="statCategories">—</strong>
-        <span>সার্ভিস ক্যাটাগরি</span>
-      </div>
+      <div><strong id="statUsers">—</strong><span>নিবন্ধিত সদস্য</span></div>
+      <div><strong id="statServices">—</strong><span>মোট সার্ভিস</span></div>
+      <div><strong id="statActive">—</strong><span>সক্রিয় সার্ভিস</span></div>
+      <div><strong id="statCategories">—</strong><span>সার্ভিস ক্যাটাগরি</span></div>
     </section>
+    <p class="stats-disclaimer">প্রদর্শিত পরিসংখ্যান উদাহরণমাত্র; এগুলো প্রকৃত ব্যবহারকারী বা সার্ভিসের হিসাব নয়।</p>
 
-    <!-- ADMIN MANAGED TOP BANNERS -->
     <section class="managed-banners section" id="landingTopBanners"></section>
 
-    <!-- SERVICES -->
     <section class="section" id="services">
       <div class="section-heading">
         <div>
           <div class="section-kicker">OUR SERVICES</div>
           <h2>আমাদের <span>সার্ভিসসমূহ</span></h2>
         </div>
-
-        <p>
-          আপনার প্রয়োজনীয় সার্ভিসগুলো এক জায়গায়
-          সুন্দরভাবে সাজানো হয়েছে।
-        </p>
+        <p>আপনার প্রয়োজনীয় সার্ভিসগুলো এক জায়গায় সুন্দরভাবে সাজানো হয়েছে।</p>
       </div>
-
       <div class="service-grid" id="landingServiceGrid">
         <div class="service-card service-card-muted">
           <div class="service-icon">✦</div>
@@ -156,340 +97,181 @@
       </div>
     </section>
 
-    <!-- ADMIN MANAGED MIDDLE BANNERS -->
     <section class="managed-banners section" id="landingMiddleBanners"></section>
 
-    <!-- HOW IT WORKS -->
     <section class="how-section" id="how">
       <div class="how-copy">
         <div class="section-kicker">HOW IT WORKS</div>
         <h2>ব্যবহার করুন <span>সহজেই</span></h2>
-
-        <p>
-          কয়েকটি সহজ ধাপে RS PAY-তে আপনার অ্যাকাউন্ট
-          তৈরি করে সার্ভিসগুলো সম্পর্কে জানতে পারবেন।
-        </p>
-
-        <button class="btn btn-gold btn-large" data-open="register" id="howCta">
-          অ্যাকাউন্ট তৈরি করুন →
-        </button>
+        <p>কয়েকটি সহজ ধাপে RS PAY-তে অ্যাকাউন্ট তৈরি করে সার্ভিসগুলো সম্পর্কে জানতে পারবেন।</p>
+        <button class="btn btn-gold btn-large" data-open="register" id="howCta">অ্যাকাউন্ট তৈরি করুন →</button>
       </div>
-
       <div class="steps">
-        <div class="step">
-          <b>01</b>
-          <div>
-            <h3>অ্যাকাউন্ট তৈরি</h3>
-            <p>আপনার নাম, মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খুলুন।</p>
-          </div>
-        </div>
-
-        <div class="step">
-          <b>02</b>
-          <div>
-            <h3>ড্যাশবোর্ডে প্রবেশ</h3>
-            <p>লগইন করে আপনার অ্যাকাউন্টের তথ্য ও সার্ভিস দেখুন।</p>
-          </div>
-        </div>
-
-        <div class="step">
-          <b>03</b>
-          <div>
-            <h3>সার্ভিস সম্পর্কে জানুন</h3>
-            <p>উপলভ্য সার্ভিসের বিস্তারিত তথ্য দেখুন।</p>
-          </div>
-        </div>
+        <div class="step"><b>01</b><div><h3>অ্যাকাউন্ট তৈরি</h3><p>আপনার নাম, মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে অ্যাকাউন্ট খুলুন।</p></div></div>
+        <div class="step"><b>02</b><div><h3>ড্যাশবোর্ডে প্রবেশ</h3><p>লগইন করে আপনার অ্যাকাউন্টের তথ্য ও সার্ভিস দেখুন।</p></div></div>
+        <div class="step"><b>03</b><div><h3>সার্ভিস সম্পর্কে জানুন</h3><p>উপলভ্য সার্ভিসের বিস্তারিত তথ্য দেখুন।</p></div></div>
       </div>
     </section>
 
-    <!-- ABOUT -->
     <section class="about-strip" id="about">
       <div class="about-icon">RS</div>
       <div>
         <div class="section-kicker">ABOUT RS PAY</div>
         <h2>এক প্ল্যাটফর্মে ডিজিটাল অভিজ্ঞতা</h2>
-        <p>
-          RS PAY একটি ডিজিটাল সার্ভিস প্ল্যাটফর্ম।
-          আমাদের লক্ষ্য সহজ ও পরিচ্ছন্ন ব্যবহার অভিজ্ঞতা তৈরি করা।
-        </p>
+        <p>RS PAY একটি ডিজিটাল সার্ভিস প্ল্যাটফর্ম। আমাদের লক্ষ্য সহজ ও পরিচ্ছন্ন ব্যবহার অভিজ্ঞতা তৈরি করা।</p>
       </div>
     </section>
-
   </main>
 
-  <!-- USER DASHBOARD -->
   <main id="dashboardView" class="hidden">
-
     <section class="dashboard-view">
-
       <div class="dashboard-welcome">
         <div>
           <div class="section-kicker">USER DASHBOARD</div>
           <h1>স্বাগতম, <span id="welcomeName">User</span></h1>
           <p>আপনার RS PAY অ্যাকাউন্টে স্বাগতম।</p>
         </div>
-
         <button class="btn btn-outline" id="logoutBtn">লগআউট</button>
       </div>
 
       <div class="dashboard-grid">
-
-        <!-- SIDEBAR -->
         <aside class="dash-sidebar">
           <div class="dash-user">
             <div class="avatar" id="userInitial">U</div>
-            <div>
-              <b id="sideName">User</b>
-              <small id="sideEmail">Mobile Number</small>
-            </div>
+            <div><b id="sideName">User</b><small id="sideEmail">Mobile Number</small></div>
           </div>
-
-          <a href="#" class="dash-link active" data-dash-tab="overview">
-            ◈ ড্যাশবোর্ড
-          </a>
-
-          <a href="#" class="dash-link" data-dash-tab="account">
-            ◉ আমার অ্যাকাউন্ট
-          </a>
-
-          <a href="admin.html" class="dash-link">
-            ⚙ অ্যাডমিন প্যানেল
-          </a>
-
-          <button class="dash-link" id="logoutBtnSidebar" type="button">
-            ↪ লগআউট
-          </button>
-
-          <div class="dash-note">
-            RS PAY<br>
-            আপনার অ্যাকাউন্টের তথ্য এখানে দেখতে পারবেন।
-          </div>
+          <button class="dash-link active" data-dash-tab="overview">◈ ড্যাশবোর্ড</button>
+          <button class="dash-link" data-dash-tab="categories">▦ ক্যাটাগরি</button>
+          <button class="dash-link" data-dash-tab="account">◉ আমার অ্যাকাউন্ট</button>
+          <div class="dash-note">RS PAY<br>আপনার অ্যাকাউন্টের তথ্য এখানে দেখতে পারবেন।</div>
         </aside>
 
-        <!-- DASHBOARD CONTENT -->
         <div class="dash-main">
-
-          <!-- OVERVIEW -->
-          <section id="overview">
-
+          <section id="overview" class="dash-panel">
             <div class="dash-banner">
               <div>
                 <span>WELCOME TO RS PAY</span>
                 <h2>আপনার ডিজিটাল ড্যাশবোর্ড</h2>
                 <p>আপনার অ্যাকাউন্ট ও সার্ভিসের তথ্য দেখুন।</p>
               </div>
-
               <div class="banner-mark">RS</div>
             </div>
-
             <div class="dash-cards">
-              <div class="dash-card">
-                <span>ACCOUNT STATUS</span>
-                <strong class="status-active">Active</strong>
-                <small>আপনার অ্যাকাউন্ট</small>
-              </div>
-
-              <div class="dash-card">
-                <span>REGISTERED MOBILE</span>
-                <strong id="dashboardPhone">—</strong>
-                <small>অ্যাকাউন্টের মোবাইল নম্বর</small>
-              </div>
-
-              <div class="dash-card">
-                <span>PLATFORM</span>
-                <strong>RS PAY</strong>
-                <small>Digital Services</small>
-              </div>
+              <div class="dash-card"><span>ACCOUNT STATUS</span><strong class="status-active">Active</strong><small>আপনার অ্যাকাউন্ট</small></div>
+              <div class="dash-card"><span>REGISTERED MOBILE</span><strong id="dashboardPhone">—</strong><small>অ্যাকাউন্টের মোবাইল নম্বর</small></div>
+              <div class="dash-card"><span>PLATFORM</span><strong>RS PAY</strong><small>Digital Services</small></div>
             </div>
-
-            <div class="dash-section-title">
-              <h2>উপলভ্য সার্ভিস</h2>
-            </div>
-
+            <div class="dash-section-title"><h2>উপলভ্য সার্ভিস</h2></div>
             <div class="quick-services" id="dashboardServiceGrid">
-              <div>
-                ✦
-                <b>সার্ভিস লোড হচ্ছে</b>
-                <small>অপেক্ষা করুন</small>
-              </div>
+              <div><b>সার্ভিস লোড হচ্ছে</b><small>অপেক্ষা করুন</small></div>
             </div>
-
             <div id="dashboardBanners" class="managed-banners"></div>
-
             <div class="dashboard-disclaimer">
               বর্তমানে এই ড্যাশবোর্ডে অ্যাকাউন্ট ও সার্ভিসের তথ্য দেখানো হচ্ছে।
-              কোনো লেনদেন বা রিচার্জ সুবিধা চালু আছে—এমন দাবি করা হচ্ছে না।
+              কোনো রিচার্জ বা লেনদেন সুবিধা চালু আছে—এমন দাবি করা হচ্ছে না।
             </div>
           </section>
 
-          <!-- ACCOUNT -->
-          <section id="accountPanel" class="account-panel hidden">
+          <section id="categoriesPanel" class="dash-panel hidden">
+            <div class="panel-heading">
+              <div class="section-kicker">SERVICE DIRECTORY</div>
+              <h2>সার্ভিস ক্যাটাগরি</h2>
+              <p>বর্তমানে সিস্টেমে থাকা সার্ভিসগুলো এখানে দেখানো হবে।</p>
+            </div>
+            <div id="categoryGrid" class="category-grid">
+              <div class="empty-state">ক্যাটাগরি লোড হচ্ছে…</div>
+            </div>
+          </section>
+
+          <section id="accountPanel" class="dash-panel account-panel hidden">
             <div class="account-card">
               <div class="account-profile-head">
-                <div class="avatar" id="accountInitial">U</div>
-                <div>
-                  <b id="accountDisplayName">User</b>
-                  <small id="accountDisplayEmail">Mobile Number</small>
-                </div>
+                <div class="avatar account-avatar" id="accountInitial">U</div>
+                <div><b id="accountDisplayName">User</b><small id="accountDisplayEmail">Mobile Number</small></div>
               </div>
-
               <h2>প্রোফাইল তথ্য</h2>
-
               <form id="profileForm" class="profile-form">
-                <label>
-                  আপনার নাম
-                  <input id="profileName" type="text" required maxlength="60">
-                </label>
-
-                <label>
-                  মোবাইল নম্বর
-                  <input id="profileEmail" type="tel" disabled>
-                </label>
-
-                <button class="btn btn-gold" type="submit">
-                  প্রোফাইল আপডেট
-                </button>
-
+                <label>আপনার নাম<input id="profileName" type="text" required maxlength="60"></label>
+                <label>মোবাইল নম্বর<input id="profileEmail" type="tel" disabled></label>
+                <button class="btn btn-gold" type="submit">প্রোফাইল আপডেট</button>
                 <p id="profileMessage" class="form-message"></p>
               </form>
             </div>
-          </section>
 
+            <div class="account-card">
+              <h2>প্রোফাইল ছবি</h2>
+              <p class="muted">এই ডিভাইসের ব্রাউজারে ছবিটি সংরক্ষিত থাকবে।</p>
+              <div class="photo-tools">
+                <img id="profilePhotoPreview" class="profile-photo hidden" alt="Profile preview">
+                <label class="upload-label" for="profilePhotoInput">ছবি নির্বাচন করুন</label>
+                <input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp">
+                <button class="btn btn-outline btn-small" id="removePhotoBtn" type="button">ছবি সরান</button>
+              </div>
+              <p id="photoMessage" class="form-message"></p>
+            </div>
+
+            <div class="account-card">
+              <h2>অ্যাপের থিম</h2>
+              <p class="muted">আপনার পছন্দের অ্যাকসেন্ট কালার নির্বাচন করুন।</p>
+              <div class="theme-options">
+                <button type="button" class="theme-choice" data-theme="#e9bd67" aria-label="Gold"></button>
+                <button type="button" class="theme-choice" data-theme="#8b63d9" aria-label="Purple"></button>
+                <button type="button" class="theme-choice" data-theme="#168b83" aria-label="Teal"></button>
+                <button type="button" class="theme-choice" data-theme="#397bd4" aria-label="Blue"></button>
+              </div>
+              <p class="muted small-note">থিমের পছন্দ শুধু এই ব্রাউজারে সংরক্ষিত হবে।</p>
+            </div>
+
+            <div class="account-card admin-access-card">
+              <div><h2>Admin Access</h2><p class="muted">অনুমোদিত অ্যাডমিনদের জন্য প্রবেশপথ।</p></div>
+              <a class="btn btn-outline" href="admin.html">অ্যাডমিন প্যানেল →</a>
+            </div>
+          </section>
         </div>
       </div>
     </section>
+
+    <nav class="app-bottom-nav" id="appBottomNav">
+      <button type="button" class="bottom-tab active" data-dash-tab="overview"><span>⌂</span><small>Home</small></button>
+      <button type="button" class="bottom-tab" data-dash-tab="categories"><span>▦</span><small>Categories</small></button>
+      <button type="button" class="bottom-tab" data-dash-tab="account"><span>◉</span><small>My Account</small></button>
+    </nav>
   </main>
 
-  <!-- AUTH MODAL -->
   <div class="modal-backdrop hidden" id="authModal">
     <section class="auth-modal">
-
       <button class="modal-close" id="closeModal" type="button">×</button>
-
-      <a class="brand modal-brand" href="#">
-        <span class="brand-mark">RS</span>
-        <span class="brand-pay">PAY</span>
-      </a>
-
+      <a class="brand modal-brand" href="#"><span class="brand-mark">RS</span><span class="brand-pay">PAY</span></a>
       <h2 id="authTitle">অ্যাকাউন্টে প্রবেশ করুন</h2>
-
-      <p class="auth-intro" id="authIntro">
-        আপনার অ্যাকাউন্টে প্রবেশ করতে তথ্য দিন।
-      </p>
-
+      <p class="auth-intro" id="authIntro">আপনার অ্যাকাউন্টে প্রবেশ করতে তথ্য দিন।</p>
       <div class="auth-tabs">
-        <button type="button" id="loginTab" class="auth-tab active">
-          লগইন
-        </button>
-
-        <button type="button" id="registerTab" class="auth-tab">
-          রেজিস্ট্রেশন
-        </button>
+        <button type="button" id="loginTab" class="auth-tab active">লগইন</button>
+        <button type="button" id="registerTab" class="auth-tab">রেজিস্ট্রেশন</button>
       </div>
-
       <form id="authForm">
-
-        <label id="nameLabel" class="hidden">
-          আপনার নাম
-          <input
-            id="nameInput"
-            name="name"
-            type="text"
-            maxlength="60"
-            placeholder="আপনার পূর্ণ নাম"
-          >
+        <label id="nameLabel" class="hidden">আপনার নাম
+          <input id="nameInput" name="name" type="text" maxlength="60" placeholder="আপনার পূর্ণ নাম">
         </label>
-
-        <label>
-          মোবাইল নম্বর
-          <input
-            id="phoneInput"
-            name="phone"
-            type="tel"
-            inputmode="tel"
-            autocomplete="tel"
-            required
-            maxlength="16"
-            placeholder="01XXXXXXXXX"
-          >
+        <label>মোবাইল নম্বর
+          <input id="phoneInput" name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="16" placeholder="01XXXXXXXXX">
         </label>
-
-        <div id="verifyNote" class="verification-note hidden">
-          ◷ মোবাইল নম্বর যাচাই — পরে চালু হবে
-        </div>
-
-        <label>
-          পাসওয়ার্ড
-          <input
-            id="passwordInput"
-            name="password"
-            type="password"
-            required
-            minlength="10"
-            maxlength="72"
-            placeholder="কমপক্ষে ১০ অক্ষর"
-          >
+        <div id="verifyNote" class="verification-note hidden">◷ মোবাইল নম্বর যাচাই — পরে চালু হবে</div>
+        <label>পাসওয়ার্ড
+          <input id="passwordInput" name="password" type="password" required minlength="10" maxlength="72" placeholder="কমপক্ষে ১০ অক্ষর">
         </label>
-
         <p id="formMessage" class="form-message"></p>
-
-        <button
-          class="btn btn-gold auth-submit"
-          id="submitAuth"
-          type="submit"
-        >
-          লগইন করুন
-        </button>
-
+        <button class="btn btn-gold auth-submit" id="submitAuth" type="submit">লগইন করুন</button>
       </form>
-
-      <p class="privacy-note">
-        আপনার অ্যাকাউন্টের তথ্য নিরাপদ রাখুন।
-        পাসওয়ার্ড কারও সঙ্গে শেয়ার করবেন না।
-      </p>
-
+      <p class="privacy-note">আপনার অ্যাকাউন্টের তথ্য নিরাপদ রাখুন। পাসওয়ার্ড কারও সঙ্গে শেয়ার করবেন না।</p>
     </section>
   </div>
 
-  <!-- FOOTER -->
   <footer class="footer">
-    <a class="brand" href="#">
-      <span class="brand-mark">RS</span>
-      <span class="brand-pay">PAY</span>
-    </a>
-
+    <a class="brand" href="#"><span class="brand-mark">RS</span><span class="brand-pay">PAY</span></a>
     <p>© <span id="year"></span> RS PAY. All rights reserved.</p>
   </footer>
-
 </div>
 
 <script src="app.js"></script>
-
-<script>
-  // Sidebar logout button
-  document.getElementById("logoutBtnSidebar")?.addEventListener("click", () => {
-    document.getElementById("logoutBtn")?.click();
-  });
-
-  // Dashboard mobile number
-  const phoneObserver = new MutationObserver(() => {
-    const phone = document.getElementById("sideEmail")?.textContent || "—";
-    const target = document.getElementById("dashboardPhone");
-    if (target) target.textContent = phone;
-  });
-
-  const sidePhone = document.getElementById("sideEmail");
-  if (sidePhone) {
-    phoneObserver.observe(sidePhone, {
-      childList: true,
-      characterData: true,
-      subtree: true
-    });
-  }
-
-  // Footer year
-  document.getElementById("year").textContent = new Date().getFullYear();
-</script>
-
 </body>
 </html>
