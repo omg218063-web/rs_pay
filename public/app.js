@@ -1,3 +1,4 @@
+const landingScreen = document.getElementById("landingScreen");
 const authScreen = document.getElementById("authScreen");
 const appScreen = document.getElementById("appScreen");
 
@@ -17,7 +18,8 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
 
-  setTimeout(() => {
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
     toast.classList.remove("show");
   }, 3000);
 }
@@ -41,6 +43,52 @@ async function apiRequest(url, options = {}) {
   return data;
 }
 
+// Show landing page
+function showLanding() {
+  landingScreen.classList.remove("hidden");
+  authScreen.classList.add("hidden");
+  appScreen.classList.add("hidden");
+
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+// Open login or registration
+function openAuth(mode = "register") {
+  landingScreen.classList.add("hidden");
+  appScreen.classList.add("hidden");
+  authScreen.classList.remove("hidden");
+
+  switchAuth(mode);
+
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+// Back to landing page
+document.getElementById("backToLanding").addEventListener("click", () => {
+  showLanding();
+});
+
+// All Get Started and Login buttons
+document.querySelectorAll("[data-open-auth]").forEach(button => {
+  button.addEventListener("click", () => {
+    openAuth(button.dataset.openAuth);
+    document.getElementById("landingNav").classList.remove("open");
+  });
+});
+
+// Mobile navigation menu
+document.getElementById("menuToggle").addEventListener("click", () => {
+  document.getElementById("landingNav").classList.toggle("open");
+});
+
+// Close mobile menu after selecting a link
+document.querySelectorAll(".landing-nav a").forEach(link => {
+  link.addEventListener("click", () => {
+    document.getElementById("landingNav").classList.remove("open");
+  });
+});
+
+// Switch between login and registration
 function switchAuth(mode) {
   const isRegister = mode === "register";
 
@@ -63,10 +111,16 @@ loginTab.addEventListener("click", () => switchAuth("login"));
 registerTab.addEventListener("click", () => switchAuth("register"));
 
 function initials(name) {
-  const words = String(name || "RS").trim().split(/\s+/);
-  return words.slice(0, 2).map(word => word[0]).join("").toUpperCase();
+  return String(name || "RS")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(word => word[0])
+    .join("")
+    .toUpperCase();
 }
 
+// Theme customization
 function setTheme(theme) {
   document.body.dataset.theme = theme;
 
@@ -78,44 +132,64 @@ function setTheme(theme) {
   });
 }
 
+// Show dashboard after successful login
 function showApp(user) {
   currentUser = user;
 
+  landingScreen.classList.add("hidden");
   authScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
+
+  const userInitials = initials(user.name);
 
   document.getElementById("homeName").textContent = user.name;
   document.getElementById("profileName").textContent = user.name;
   document.getElementById("profilePhone").textContent = user.phone;
   document.getElementById("editName").value = user.name;
 
-  const userInitials = initials(user.name);
-
   document.getElementById("profileAvatar").textContent = userInitials;
   document.getElementById("headerProfile").textContent = userInitials;
 
-  document.getElementById("phoneStatus").textContent =
-    user.phoneVerified ? "Verified" : "Not Verified";
-
-  document.getElementById("phoneStatus").className =
-    user.phoneVerified ? "verified" : "pending";
-
-  document.getElementById("accountStatus").textContent =
-    user.accountVerified ? "Verified" : "Not Verified";
-
-  document.getElementById("accountStatus").className =
-    user.accountVerified ? "verified" : "pending";
+  updateVerificationStatus(user);
 
   setTheme(user.theme || "purple");
   openPage("homePage");
+
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 
+function updateVerificationStatus(user) {
+  const phoneStatus = document.getElementById("phoneStatus");
+  const accountStatus = document.getElementById("accountStatus");
+
+  phoneStatus.textContent = user.phoneVerified
+    ? "Verified"
+    : "Not Verified";
+
+  phoneStatus.className = user.phoneVerified
+    ? "verified"
+    : "pending";
+
+  accountStatus.textContent = user.accountVerified
+    ? "Verified"
+    : "Not Verified";
+
+  accountStatus.className = user.accountVerified
+    ? "verified"
+    : "pending";
+}
+
+// Dashboard navigation
 function openPage(pageId) {
   document.querySelectorAll(".page").forEach(page => {
     page.classList.add("hidden");
   });
 
-  document.getElementById(pageId).classList.remove("hidden");
+  const target = document.getElementById(pageId);
+
+  if (!target) return;
+
+  target.classList.remove("hidden");
 
   document.querySelectorAll(".nav-item").forEach(button => {
     button.classList.toggle(
@@ -127,7 +201,6 @@ function openPage(pageId) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Navigation
 document.querySelectorAll(".nav-item").forEach(button => {
   button.addEventListener("click", () => {
     openPage(button.dataset.page);
@@ -144,10 +217,12 @@ registerForm.addEventListener("submit", async event => {
 
   const formData = new FormData(registerForm);
 
-  const name = formData.get("name").trim();
-  const phone = formData.get("phone").trim();
-  const password = formData.get("password");
-  const confirmPassword = formData.get("confirmPassword");
+  const name = String(formData.get("name") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(
+    formData.get("confirmPassword") || ""
+  );
 
   if (password !== confirmPassword) {
     showToast("দুটি পাসওয়ার্ড মিলছে না।");
@@ -166,14 +241,20 @@ registerForm.addEventListener("submit", async event => {
   try {
     const data = await apiRequest("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, phone, password })
+      body: JSON.stringify({
+        name,
+        phone,
+        password
+      })
     });
 
     registerForm.reset();
     showApp(data.user);
-    showToast(data.message);
+    showToast(data.message || "অ্যাকাউন্ট তৈরি হয়েছে।");
+
   } catch (error) {
     showToast(error.message);
+
   } finally {
     button.disabled = false;
     button.innerHTML = 'অ্যাকাউন্ট তৈরি করুন <span>→</span>';
@@ -186,8 +267,8 @@ loginForm.addEventListener("submit", async event => {
 
   const formData = new FormData(loginForm);
 
-  const phone = formData.get("phone").trim();
-  const password = formData.get("password");
+  const phone = String(formData.get("phone") || "").trim();
+  const password = String(formData.get("password") || "");
 
   const button = loginForm.querySelector("button[type='submit']");
   button.disabled = true;
@@ -196,21 +277,26 @@ loginForm.addEventListener("submit", async event => {
   try {
     const data = await apiRequest("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ phone, password })
+      body: JSON.stringify({
+        phone,
+        password
+      })
     });
 
     loginForm.reset();
     showApp(data.user);
-    showToast(data.message);
+    showToast(data.message || "Login সফল হয়েছে।");
+
   } catch (error) {
     showToast(error.message);
+
   } finally {
     button.disabled = false;
     button.innerHTML = 'Login করুন <span>→</span>';
   }
 });
 
-// Update name
+// Update profile name
 document.getElementById("saveProfile").addEventListener("click", async () => {
   const name = document.getElementById("editName").value.trim();
 
@@ -222,13 +308,14 @@ document.getElementById("saveProfile").addEventListener("click", async () => {
 
     showApp(data.user);
     openPage("accountPage");
-    showToast("আপনার নাম আপডেট হয়েছে।");
+    showToast("প্রোফাইল আপডেট হয়েছে।");
+
   } catch (error) {
     showToast(error.message);
   }
 });
 
-// Change theme
+// Save selected theme
 document.querySelectorAll(".theme-dot").forEach(button => {
   button.addEventListener("click", async () => {
     const theme = button.dataset.theme;
@@ -241,32 +328,34 @@ document.querySelectorAll(".theme-dot").forEach(button => {
 
       showApp(data.user);
       openPage("accountPage");
-      showToast("আপনার নতুন থিম সংরক্ষণ হয়েছে।");
+      showToast("নতুন থিম সংরক্ষণ হয়েছে।");
+
     } catch (error) {
       showToast(error.message);
     }
   });
 });
 
-// Verification information
+// Verification details
 document.getElementById("verifyButton").addEventListener("click", async () => {
   try {
     await apiRequest("/api/verification/request", {
       method: "POST",
       body: JSON.stringify({})
     });
+
   } catch (error) {
     showToast(error.message);
   }
 });
 
-// Services
+// Service cards
 document.querySelectorAll("[data-service]").forEach(button => {
   button.addEventListener("click", () => {
     const service = button.dataset.service;
 
     showToast(
-      service + " সার্ভিস এখনো পেমেন্ট API-এর সঙ্গে সংযুক্ত নয়।"
+      service + " সার্ভিসের API এখনো সংযুক্ত করা হয়নি।"
     );
   });
 });
@@ -280,24 +369,25 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
     });
 
     currentUser = null;
-    appScreen.classList.add("hidden");
-    authScreen.classList.remove("hidden");
+
+    showLanding();
     switchAuth("login");
 
-    showToast("আপনি Logout করেছেন।");
+    showToast("আপনি সফলভাবে Logout করেছেন।");
+
   } catch (error) {
     showToast(error.message);
   }
 });
 
-// Check existing login session
+// Check previous login session
 async function checkSession() {
   try {
     const data = await apiRequest("/api/auth/me");
     showApp(data.user);
+
   } catch (error) {
-    authScreen.classList.remove("hidden");
-    appScreen.classList.add("hidden");
+    showLanding();
   }
 }
 
