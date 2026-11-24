@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 async function connectDatabase() {
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is missing");
+    throw new Error("MONGODB_URI is missing from Environment Variables");
   }
 
   await mongoose.connect(process.env.MONGODB_URI, {
