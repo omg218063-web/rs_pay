@@ -1,55 +1,26 @@
 # RS PAY
 
-Premium landing page and account system for RS PAY Bangladesh.
+RS PAY retains the original dark-purple and gold landing-page design and adds a protected admin CMS.
 
-## Technology
-- Node.js
-- Express.js
-- MongoDB Atlas
-- HTML
-- CSS
-- JavaScript
+## Files
+- `server.js`: authentication, sessions, public content APIs and admin APIs
+- `database.js`: MongoDB connection
+- `public/index.html`, `style.css`, `app.js`: original site design plus dashboard account and managed content
+- `public/admin.html`, `admin.css`, `admin.js`: separate admin panel at `/admin.html`
 
-## Installation
+## Setup
+1. Node.js 20+
+2. `npm install`
+3. Set `MONGODB_URI`, `DB_NAME=rs_pay`, `SESSION_SECRET` (32+ random characters), and `ADMIN_PASSWORD` (12+ characters) in environment variables.
+4. `npm start`
 
-npm install
+## Render
+Build: `npm install`
+Start: `npm start`
+Set `NODE_ENV=production` and all required environment variables in Render. Never commit `.env`.
 
-## Run
+## Admin
+Open `/admin.html`. The admin can edit landing text, manage banners, add/enable/disable/delete service categories, and view a read-only user directory.
 
-npm start
-
-## Environment Variables
-
-NODE_ENV=production
-DB_NAME=rs_pay
-MONGODB_URI=your_mongodb_connection
-SESSION_SECRET=your_private_random_secret
-
-## Render Settings
-
-Build Command:
-npm install
-
-Start Command:
-npm start
-
-## Features
-
-- Premium landing page
-- Responsive mobile design
-- User registration
-- User login
-- Password hashing
-- MongoDB user storage
-- MongoDB session storage
-- User dashboard
-- Logout
-
-## Important
-
-This starter does not process payments, store money,
-perform mobile top-ups, or pay utility bills.
-
-Real services require authorized providers, contracts,
-a responsible adult business operator, and applicable
-legal and compliance review.
+## Scope and safety
+The site does not process live payments, deposits, withdrawals, bill payments, or mobile top-ups. Those require an authorized adult operator, approved service providers, contracts, and applicable compliance review.
