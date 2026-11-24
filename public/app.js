@@ -1,706 +1,741 @@
+
 "use strict";
 
-// ========================================
-// RS PAY - MAIN APPLICATION
-// Existing server API compatible version
-// ========================================
+/* =========================================
+   RS PAY - FRONTEND APPLICATION
+   Existing backend API assumptions:
+   /api/auth/register
+   /api/auth/login
+   /api/auth/logout
+   /api/auth/me
+   /api/services
+   /api/site-content
+   /api/account/profile
+========================================= */
 
-const $ = selector => document.querySelector(selector);
-const $$ = selector => [...document.querySelectorAll(selector)];
+const API = {
+  register: "/api/auth/register",
+  login: "/api/auth/login",
+  logout: "/api/auth/logout",
+  me: "/api/auth/me",
+  services: "/api/services",
+  content: "/api/site-content",
+  profile: "/api/account/profile"
+};
 
-const landingView = $("#landingView");
-const dashboardView = $("#dashboardView");
-const modal = $("#authModal");
-const authForm = $("#authForm");
+const $ = (selector) => document.querySelector(selector);
 
-let authMode = "login";
-let currentUser = null;
-let serviceCache = [];
+const state = {
+  user: null,
+  services: [],
+  banners: [],
+  authMode: "login",
+  activeTab: "home"
+};
 
-// ========================================
-// API HELPER
-// ========================================
+/* ---------- SAFE HELPERS ---------- */
 
-async function api(url, options = {}) {
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
+function getInitial(name) {
+  const value = String(name || "U").trim();
+  return value ? value.charAt(0).toUpperCase() : "U";
+}
+
+async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
     credentials: "same-origin",
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
-    },
-    ...options
+    }
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || "অনুরোধটি সম্পন্ন হয়নি।");
+    throw new Error(
+      data.message ||
+      data.error ||
+      `Request failed (${response.status})`
+    );
   }
 
   return data;
 }
 
-// ========================================
-// SAFE TEXT
-// ========================================
+function showMessage(element, message, success = false) {
+  if (!element) return;
 
-function safeText(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
+  element.textContent = message || "";
+  element.classList.toggle("success", Boolean(success));
 }
 
-// ========================================
-// AUTH MODAL
-// ========================================
+function setButtonLoading(button, loading, normalText) {
+  if (!button) return;
 
-function setMode(mode) {
-  authMode = mode;
-  const registering = mode === "register";
+  button.disabled = loading;
+  button.textContent = loading ? "অপেক্ষা করুন..." : normalText;
+}
 
-  $("#authTitle").textContent = registering
+/* ---------- AUTH VIEW ---------- */
+
+function setAuthMode(mode) {
+  state.authMode = mode;
+
+  const isRegister = mode === "register";
+
+  $("#loginTab").classList.toggle("active", !isRegister);
+  $("#registerTab").classList.toggle("active", isRegister);
+
+  $("#nameField").classList.toggle("hidden", !isRegister);
+
+  $("#authTitle").textContent = isRegister
     ? "নতুন অ্যাকাউন্ট তৈরি করুন"
     : "অ্যাকাউন্টে প্রবেশ করুন";
 
-  $("#authIntro").textContent = registering
-    ? "নিচের তথ্য দিয়ে RS PAY অ্যাকাউন্ট খুলুন।"
-    : "আপনার অ্যাকাউন্টে প্রবেশ করতে তথ্য দিন।";
+  $("#authIntro").textContent = isRegister
+    ? "আপনার তথ্য দিয়ে RS PAY অ্যাকাউন্ট তৈরি করুন।"
+    : "মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে লগইন করুন।";
 
-  $("#nameLabel").classList.toggle("hidden", !registering);
-  $("#nameInput").required = registering;
-  $("#verifyNote").classList.toggle("hidden", !registering);
+  $("#authSubmit").textContent = isRegister
+    ? "রেজিস্ট্রেশন করুন"
+    : "লগইন করুন";
 
-  $("#passwordInput").autocomplete = registering
-    ? "new-password"
-    : "current-password";
+  $("#passwordInput").setAttribute(
+    "autocomplete",
+    isRegister ? "new-password" : "current-password"
+  );
 
-  $("#submitAuth").textContent = registering
-    ? "অ্যাকাউন্ট তৈরি করুন →"
-    : "লগইন করুন →";
-
-  $("#loginTab").classList.toggle("active", !registering);
-  $("#registerTab").classList.toggle("active", registering);
-  $("#formMessage").textContent = "";
+  showMessage($("#authMessage"), "");
 }
 
-function openModal(mode) {
-  setMode(mode);
-  modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
+function showAuth() {
+  $("#authView").classList.remove("hidden");
+  $("#appView").classList.add("hidden");
 }
 
-function closeModal() {
-  modal.classList.add("hidden");
-  document.body.style.overflow = "";
+function showApp() {
+  $("#authView").classList.add("hidden");
+  $("#appView").classList.remove("hidden");
+
+  updateAccountUI();
+  openTab("home");
 }
 
-$$("[data-open]").forEach(button => {
-  button.addEventListener("click", () => {
-    openModal(button.dataset.open);
-  });
+/* ---------- AUTH SUBMIT ---------- */
+
+$("#loginTab").addEventListener("click", () => {
+  setAuthMode("login");
 });
 
-$("#closeModal").addEventListener("click", closeModal);
-
-$("#loginTab").addEventListener("click", () => setMode("login"));
-$("#registerTab").addEventListener("click", () => setMode("register"));
-
-modal.addEventListener("click", event => {
-  if (event.target === modal) closeModal();
+$("#registerTab").addEventListener("click", () => {
+  setAuthMode("register");
 });
 
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !modal.classList.contains("hidden")) {
-    closeModal();
-  }
-});
-
-// ========================================
-// LOGIN AND REGISTRATION
-// ========================================
-
-authForm.addEventListener("submit", async event => {
+$("#authForm").addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const message = $("#formMessage");
-  const submit = $("#submitAuth");
+  const isRegister = state.authMode === "register";
 
-  message.textContent = "অনুগ্রহ করে অপেক্ষা করুন…";
-  submit.disabled = true;
+  const name = $("#nameInput").value.trim();
+  const phone = $("#phoneInput").value.trim();
+  const password = $("#passwordInput").value;
 
-  const payload = {
-    phone: $("#phoneInput").value.trim(),
-    password: $("#passwordInput").value
-  };
-
-  if (authMode === "register") {
-    payload.name = $("#nameInput").value.trim();
+  if (isRegister && !name) {
+    showMessage($("#authMessage"), "আপনার নাম লিখুন।");
+    return;
   }
 
+  if (!phone) {
+    showMessage($("#authMessage"), "মোবাইল নম্বর লিখুন।");
+    return;
+  }
+
+  if (password.length < 10) {
+    showMessage(
+      $("#authMessage"),
+      "পাসওয়ার্ড কমপক্ষে ১০ অক্ষরের হতে হবে।"
+    );
+    return;
+  }
+
+  const button = $("#authSubmit");
+
+  setButtonLoading(button, true, isRegister
+    ? "রেজিস্ট্রেশন করুন"
+    : "লগইন করুন"
+  );
+
+  showMessage($("#authMessage"), "");
+
   try {
-    const endpoint = authMode === "register"
-      ? "/api/auth/register"
-      : "/api/auth/login";
+    const result = await apiRequest(
+      isRegister ? API.register : API.login,
+      {
+        method: "POST",
+        body: JSON.stringify(
+          isRegister
+            ? { name, phone, password }
+            : { phone, password }
+        )
+      }
+    );
 
-    const result = await api(endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    state.user = result.user || result.data?.user || null;
 
-    authForm.reset();
-    showDashboard(result.user);
+    if (!state.user) {
+      throw new Error(
+        "সার্ভার থেকে ইউজার তথ্য পাওয়া যায়নি। API response পরীক্ষা করুন।"
+      );
+    }
+
+    $("#passwordInput").value = "";
+    $("#nameInput").value = "";
+
+    showApp();
+    await loadServicesAndBanners();
 
   } catch (error) {
-    message.textContent = error.message;
-
+    showMessage(
+      $("#authMessage"),
+      error.message || "লগইন করা যায়নি। আবার চেষ্টা করুন।"
+    );
   } finally {
-    submit.disabled = false;
+    setButtonLoading(
+      button,
+      false,
+      isRegister ? "রেজিস্ট্রেশন করুন" : "লগইন করুন"
+    );
   }
 });
 
-// ========================================
-// USER DASHBOARD
-// ========================================
+/* ---------- SESSION RESTORE ---------- */
 
-function getSavedPhoto() {
+async function restoreSession() {
   try {
-    return localStorage.getItem("rsPayProfilePhoto") || "";
-  } catch {
-    return "";
+    const result = await apiRequest(API.me);
+
+    state.user = result.user || result.data?.user || null;
+
+    if (state.user) {
+      showApp();
+      await loadServicesAndBanners();
+      return;
+    }
+
+  } catch (error) {
+    console.info("No active session:", error.message);
   }
+
+  showAuth();
 }
 
-function updateAvatar(element, name, photo) {
-  if (!element) return;
+/* ---------- NAVIGATION ---------- */
 
-  if (photo) {
-    element.innerHTML = "";
-    const image = document.createElement("img");
-    image.src = photo;
-    image.alt = "Profile";
-    element.appendChild(image);
-  } else {
-    element.textContent = (name || "U").trim().charAt(0).toUpperCase();
+const tabPanels = {
+  home: "homePanel",
+  categories: "categoriesPanel",
+  account: "accountPanel",
+  balance: "balancePanel",
+  deposits: "depositsPanel",
+  history: "historyPanel"
+};
+
+function openTab(tab) {
+  if (!tabPanels[tab]) {
+    tab = "home";
   }
+
+  state.activeTab = tab;
+
+  Object.entries(tabPanels).forEach(([key, panelId]) => {
+    const panel = document.getElementById(panelId);
+
+    if (panel) {
+      panel.classList.toggle("hidden", key !== tab);
+    }
+  });
+
+  document.querySelectorAll(".nav-item").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.tab === tab
+    );
+  });
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 
-function updateProfilePhotoUI() {
-  const photo = getSavedPhoto();
-  const name = currentUser?.name || "User";
+document.querySelectorAll("[data-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    openTab(button.dataset.tab);
+  });
+});
 
-  updateAvatar($("#userInitial"), name, photo);
-  updateAvatar($("#accountInitial"), name, photo);
+document.querySelectorAll("[data-open-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    openTab(button.dataset.openTab);
+  });
+});
 
-  const preview = $("#profilePhotoPreview");
-
-  if (photo) {
-    preview.src = photo;
-    preview.classList.remove("hidden");
-  } else {
-    preview.removeAttribute("src");
-    preview.classList.add("hidden");
+$("#headerAccountBtn").addEventListener("click", () => {
+  if (state.user) {
+    openTab("account");
   }
-}
+});
 
-function showDashboard(user) {
-  currentUser = user || {};
+/* ---------- USER PROFILE ---------- */
 
-  landingView.classList.add("hidden");
-  dashboardView.classList.remove("hidden");
+function updateAccountUI() {
+  const user = state.user || {};
 
-  const name = currentUser.name || "User";
-  const phone = currentUser.phone || "মোবাইল নম্বর যোগ করা হয়নি";
+  const name = user.name || user.fullName || "User";
+  const phone = user.phone || user.mobile || "";
 
   $("#welcomeName").textContent = name;
-  $("#sideName").textContent = name;
-  $("#sideEmail").textContent = phone;
-  $("#accountDisplayName").textContent = name;
-  $("#accountDisplayEmail").textContent = phone;
+  $("#accountName").textContent = name;
+  $("#accountPhone").textContent = phone;
   $("#profileName").value = name;
-  $("#profileEmail").value = currentUser.phone || "";
-  $("#dashboardPhone").textContent = phone;
+  $("#profilePhone").value = phone;
 
-  updateProfilePhotoUI();
+  const initial = getInitial(name);
 
-  closeModal();
-  showDashTab("overview");
+  $("#accountAvatar").textContent = initial;
 
-  loadCategories();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const savedImage = localStorage.getItem("rs_pay_profile_image");
+
+  if (savedImage) {
+    setAvatarImage(savedImage);
+  }
+
+  $("#year").textContent = new Date().getFullYear();
 }
 
-function showLanding() {
-  currentUser = null;
-  dashboardView.classList.add("hidden");
-  landingView.classList.remove("hidden");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function setAvatarImage(imageData) {
+  const avatar = $("#accountAvatar");
+
+  avatar.innerHTML = "";
+
+  const image = document.createElement("img");
+  image.src = imageData;
+  image.alt = "Profile image";
+
+  avatar.appendChild(image);
 }
 
-// ========================================
-// DASHBOARD TAB NAVIGATION
-// ========================================
+/* ---------- PROFILE UPDATE ---------- */
 
-function showDashTab(tab) {
-  const panels = {
-    overview: $("#overview"),
-    categories: $("#categoriesPanel"),
-    account: $("#accountPanel")
+$("#profileForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const name = $("#profileName").value.trim();
+
+  if (!name) {
+    showMessage($("#profileMessage"), "নাম লিখুন।");
+    return;
+  }
+
+  const button = $("#profileForm button");
+
+  button.disabled = true;
+  button.textContent = "সংরক্ষণ হচ্ছে...";
+
+  try {
+    const result = await apiRequest(API.profile, {
+      method: "PUT",
+      body: JSON.stringify({ name })
+    });
+
+    state.user = result.user || result.data?.user || {
+      ...state.user,
+      name
+    };
+
+    updateAccountUI();
+
+    showMessage(
+      $("#profileMessage"),
+      "প্রোফাইলের নাম আপডেট হয়েছে।",
+      true
+    );
+
+  } catch (error) {
+    showMessage(
+      $("#profileMessage"),
+      error.message || "প্রোফাইল আপডেট করা যায়নি।"
+    );
+  } finally {
+    button.disabled = false;
+    button.textContent = "নাম সংরক্ষণ করুন";
+  }
+});
+
+/* ---------- PROFILE IMAGE ---------- */
+
+$("#profilePhoto").addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+
+  if (!file) return;
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    showMessage(
+      $("#photoMessage"),
+      "শুধু JPG, PNG অথবা WEBP ছবি ব্যবহার করুন।"
+    );
+    return;
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    showMessage(
+      $("#photoMessage"),
+      "ছবির সাইজ ২ MB-এর কম হতে হবে।"
+    );
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const imageData = reader.result;
+
+      localStorage.setItem(
+        "rs_pay_profile_image",
+        imageData
+      );
+
+      setAvatarImage(imageData);
+
+      showMessage(
+        $("#photoMessage"),
+        "ছবি এই ডিভাইসে সংরক্ষণ হয়েছে।",
+        true
+      );
+
+    } catch {
+      showMessage(
+        $("#photoMessage"),
+        "ছবি সংরক্ষণ করা যায়নি। ছোট ছবি ব্যবহার করুন।"
+      );
+    }
   };
 
-  Object.entries(panels).forEach(([key, panel]) => {
-    panel.classList.toggle("hidden", key !== tab);
-  });
+  reader.onerror = () => {
+    showMessage(
+      $("#photoMessage"),
+      "ছবি পড়া যায়নি। আবার চেষ্টা করুন।"
+    );
+  };
 
-  $$("[data-dash-tab]").forEach(button => {
-    button.classList.toggle("active", button.dataset.dashTab === tab);
-  });
+  reader.readAsDataURL(file);
+});
 
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
+/* ---------- THEME COLOR ---------- */
 
-$$("[data-dash-tab]").forEach(button => {
-  button.addEventListener("click", event => {
-    event.preventDefault();
-    showDashTab(button.dataset.dashTab);
+document.querySelectorAll("[data-theme]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const color = button.dataset.theme;
+
+    document.documentElement.style.setProperty(
+      "--primary",
+      color
+    );
+
+    document.documentElement.style.setProperty(
+      "--primary-light",
+      color
+    );
+
+    localStorage.setItem("rs_pay_theme", color);
+
+    document.querySelectorAll("[data-theme]").forEach((item) => {
+      item.classList.toggle("selected", item === button);
+    });
   });
 });
 
-// ========================================
-// LOGOUT
-// ========================================
+function restoreTheme() {
+  const savedColor = localStorage.getItem("rs_pay_theme");
 
-async function logout() {
+  if (!savedColor) return;
+
+  document.documentElement.style.setProperty(
+    "--primary",
+    savedColor
+  );
+
+  document.documentElement.style.setProperty(
+    "--primary-light",
+    savedColor
+  );
+
+  document.querySelectorAll("[data-theme]").forEach((button) => {
+    button.classList.toggle(
+      "selected",
+      button.dataset.theme === savedColor
+    );
+  });
+}
+
+/* ---------- LOGOUT ---------- */
+
+$("#logoutBtn").addEventListener("click", async () => {
+  const button = $("#logoutBtn");
+
+  button.disabled = true;
+  button.textContent = "লগআউট হচ্ছে...";
+
   try {
-    await api("/api/auth/logout", {
+    await apiRequest(API.logout, {
       method: "POST",
-      body: "{}"
+      body: JSON.stringify({})
     });
+
   } catch (error) {
     console.warn("Logout request:", error.message);
   }
 
-  showLanding();
-}
+  state.user = null;
+  state.services = [];
+  state.banners = [];
 
-$("#logoutBtn").addEventListener("click", logout);
+  showAuth();
+  setAuthMode("login");
 
-// ========================================
-// MOBILE MENU
-// ========================================
-
-$("#mobileMenu").addEventListener("click", () => {
-  $(".topbar").classList.toggle("mobile-open");
+  button.disabled = false;
+  button.textContent = "লগআউট";
 });
 
-$$(".nav-links a").forEach(link => {
-  link.addEventListener("click", () => {
-    $(".topbar").classList.remove("mobile-open");
-  });
-});
+/* ---------- SERVICES ---------- */
 
-// ========================================
-// RESTORE LOGIN SESSION
-// ========================================
+function getServiceList(result) {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result.services)) return result.services;
+  if (Array.isArray(result.data)) return result.data;
+  if (Array.isArray(result.data?.services)) return result.data.services;
 
-async function restoreSession() {
-  try {
-    const result = await api("/api/auth/me");
-    showDashboard(result.user);
-  } catch {
-    showLanding();
-  }
+  return [];
 }
 
-// ========================================
-// WEBSITE CONTENT AND SERVICES
-// ========================================
+function getCategoryName(service) {
+  return (
+    service.categoryName ||
+    service.category ||
+    service.group ||
+    "অন্যান্য সার্ভিস"
+  );
+}
 
-async function loadManagedContent() {
+function getServiceIcon(service) {
+  return service.icon || "✦";
+}
+
+function isServiceEnabled(service) {
+  return service.enabled !== false &&
+    service.active !== false;
+}
+
+async function loadServicesAndBanners() {
+  await Promise.allSettled([
+    loadServices(),
+    loadBanners()
+  ]);
+}
+
+async function loadServices() {
+  const homeGrid = $("#homeCategoryGrid");
+  const allCategories = $("#allCategories");
+
   try {
-    const [contentResult, serviceResult] = await Promise.all([
-      api("/api/site-content"),
-      api("/api/services")
-    ]);
+    const result = await apiRequest(API.services);
 
-    const content = contentResult.content || {};
-    const landing = content.landing || {};
+    state.services = getServiceList(result)
+      .filter(isServiceEnabled);
 
-    if (landing.title) {
-      $("#managedLandingTitle").textContent = landing.title;
-    }
-
-    if (landing.subtitle) {
-      $("#managedLandingSubtitle").textContent = landing.subtitle;
-    }
-
-    if (landing.buttonText) {
-      $("#landingCta").textContent = `${landing.buttonText} →`;
-      $("#howCta").textContent = `${landing.buttonText} →`;
-    }
-
-    renderBanners(contentResult.banners || []);
-
-    serviceCache = (serviceResult.services || [])
-      .filter(service => service.enabled !== false);
-
-    renderServices(serviceCache);
-    updateDemoStatistics(serviceCache);
-
-    if (currentUser) {
-      loadCategories();
-    }
+    renderHomeCategories();
+    renderAllCategories();
 
   } catch (error) {
-    console.warn("RS PAY content load error:", error.message);
+    console.error("Services load error:", error);
+
+    homeGrid.innerHTML =
+      '<div class="loading-card">সার্ভিস লোড করা যায়নি। সার্ভার API পরীক্ষা করুন।</div>';
+
+    allCategories.innerHTML =
+      '<div class="loading-card">ক্যাটাগরি লোড করা যায়নি।</div>';
   }
 }
 
-// ========================================
-// BANNERS
-// ========================================
+function renderHomeCategories() {
+  const container = $("#homeCategoryGrid");
 
-function renderBanners(banners) {
-  const slots = {
-    landing_top: $("#landingTopBanners"),
-    landing_middle: $("#landingMiddleBanners"),
-    dashboard_home: $("#dashboardBanners")
-  };
+  const categories = [];
 
-  Object.entries(slots).forEach(([slot, host]) => {
-    if (!host) return;
+  state.services.forEach((service) => {
+    const name = getCategoryName(service);
 
-    const selected = banners.filter(banner =>
-      (banner.slot || banner.position) === slot &&
-      banner.enabled !== false
+    if (!categories.includes(name)) {
+      categories.push(name);
+    }
+  });
+
+  if (!categories.length) {
+    container.innerHTML =
+      '<div class="loading-card">এখনো কোনো সক্রিয় সার্ভিস পাওয়া যায়নি।</div>';
+    return;
+  }
+
+  container.innerHTML = categories.map((name) => {
+    const count = state.services.filter(
+      (service) => getCategoryName(service) === name
+    ).length;
+
+    const firstService = state.services.find(
+      (service) => getCategoryName(service) === name
     );
 
-    if (!selected.length) {
-      host.classList.add("hidden");
-      host.innerHTML = "";
-      return;
+    return `
+      <article class="category-card">
+        <div class="category-icon">
+          ${escapeHTML(getServiceIcon(firstService || {}))}
+        </div>
+
+        <h3>${escapeHTML(name)}</h3>
+
+        <p>${count}টি সার্ভিস</p>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderAllCategories() {
+  const container = $("#allCategories");
+
+  const grouped = {};
+
+  state.services.forEach((service) => {
+    const category = getCategoryName(service);
+
+    if (!grouped[category]) {
+      grouped[category] = [];
     }
 
-    host.classList.remove("hidden");
+    grouped[category].push(service);
+  });
 
-    host.innerHTML = selected.map(banner => {
-      const image = banner.imageUrl
-        ? `<img src="${safeText(banner.imageUrl)}" alt="${safeText(banner.title)}" loading="lazy">`
-        : "";
+  const names = Object.keys(grouped);
 
-      const link = banner.linkUrl || banner.link;
+  if (!names.length) {
+    container.innerHTML =
+      '<div class="loading-card">কোনো সক্রিয় ক্যাটাগরি পাওয়া যায়নি।</div>';
+    return;
+  }
 
-      const button = link
-        ? `<a class="btn btn-gold" href="${safeText(link)}" target="_blank" rel="noopener noreferrer">${safeText(banner.buttonText || "বিস্তারিত দেখুন")} ↗</a>`
-        : "";
+  container.innerHTML = names.map((category) => {
+    const servicesHTML = grouped[category].map((service) => {
+      const name = service.name || service.title || "সার্ভিস";
+      const description = service.description || "বিস্তারিত তথ্য পাওয়া যায়নি।";
 
       return `
-        <article class="managed-banner">
-          <div>
-            <span class="section-kicker">RS PAY UPDATE</span>
-            <h3>${safeText(banner.title)}</h3>
-            <p>${safeText(banner.description)}</p>
-            ${button}
-          </div>
-          ${image}
+        <article class="service-item">
+          <h3>${escapeHTML(service.icon || "✦")} ${escapeHTML(name)}</h3>
+          <p>${escapeHTML(description)}</p>
         </article>
       `;
     }).join("");
-  });
-}
 
-// ========================================
-// SERVICE CARDS
-// ========================================
-
-function renderServices(services) {
-  const landingGrid = $("#landingServiceGrid");
-  const dashboardGrid = $("#dashboardServiceGrid");
-
-  if (landingGrid) {
-    if (!services.length) {
-      landingGrid.innerHTML = `
-        <div class="service-card service-card-muted">
-          <div class="service-icon">◇</div>
-          <h3>এখনো সার্ভিস যোগ করা হয়নি</h3>
-          <p>পরবর্তীতে এখানে সার্ভিস দেখা যাবে।</p>
+    return `
+      <section class="category-group">
+        <h2>${escapeHTML(category)}</h2>
+        <div class="service-grid">
+          ${servicesHTML}
         </div>
-      `;
-    } else {
-      landingGrid.innerHTML = services.map(service => `
-        <article class="service-card managed-service-card">
-          <div class="service-icon">${safeText(service.icon || "◇")}</div>
-          <h3>${safeText(service.name)}</h3>
-          <p>${safeText(service.description || "সেবা বিভাগ")}</p>
-          <span class="card-arrow">↗</span>
-        </article>
-      `).join("");
-    }
-  }
-
-  if (dashboardGrid) {
-    if (!services.length) {
-      dashboardGrid.innerHTML = `
-        <div><b>কোনো সার্ভিস পাওয়া যায়নি</b><small>অ্যাডমিন প্যানেল থেকে সার্ভিস যোগ করা যাবে।</small></div>
-      `;
-    } else {
-      dashboardGrid.innerHTML = services.map(service => `
-        <div>
-          ${safeText(service.icon || "◇")}
-          <b>${safeText(service.name)}</b>
-          <small>${safeText(service.description || "সেবা বিভাগ")}</small>
-        </div>
-      `).join("");
-    }
-  }
+      </section>
+    `;
+  }).join("");
 }
 
-// ========================================
-// CATEGORIES
-// Existing service records only.
-// No new categories are created.
-// ========================================
+/* ---------- ADMIN BANNERS ---------- */
 
-function loadCategories() {
-  const host = $("#categoryGrid");
-  if (!host) return;
-
-  if (!serviceCache.length) {
-    host.innerHTML = `<div class="empty-state">এখনো কোনো সার্ভিস পাওয়া যায়নি।</div>`;
-    return;
-  }
-
-  const categories = new Map();
-
-  serviceCache.forEach(service => {
-    const categoryName =
-      service.category ||
-      service.categoryName ||
-      service.group ||
-      "অন্যান্য";
-
-    if (!categories.has(categoryName)) {
-      categories.set(categoryName, []);
-    }
-
-    categories.get(categoryName).push(service);
-  });
-
-  host.innerHTML = [...categories.entries()].map(([name, items]) => `
-    <article class="category-card">
-      <strong>${safeText(name)}</strong>
-      <small>${items.length} টি সার্ভিস</small>
-    </article>
-  `).join("");
-}
-
-// ========================================
-// DEMO STATISTICS
-// These values are illustrative only.
-// They are NOT real user or business data.
-// ========================================
-
-function updateDemoStatistics(services) {
-  const categories = new Set(
-    services.map(service =>
-      service.category || service.categoryName || service.group || "অন্যান্য"
-    )
-  );
-
-  const randomBetween = (min, max) =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
-
-  $("#statUsers").textContent =
-    randomBetween(850, 1450).toLocaleString("bn-BD") + "+";
-
-  $("#statServices").textContent =
-    randomBetween(services.length, Math.max(services.length, services.length + 5))
-      .toLocaleString("bn-BD") + "+";
-
-  $("#statActive").textContent =
-    services.length.toLocaleString("bn-BD");
-
-  $("#statCategories").textContent =
-    categories.size.toLocaleString("bn-BD");
-}
-
-// ========================================
-// PROFILE UPDATE
-// Existing server endpoint.
-// ========================================
-
-$("#profileForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const message = $("#profileMessage");
-  const button = event.currentTarget.querySelector('button[type="submit"]');
-
-  button.disabled = true;
-  message.textContent = "সংরক্ষণ হচ্ছে…";
+async function loadBanners() {
+  const container = $("#homeBanners");
 
   try {
-    const result = await api("/api/account/profile", {
-      method: "PUT",
-      body: JSON.stringify({
-        name: $("#profileName").value.trim()
-      })
+    const result = await apiRequest(API.content);
+
+    const content = result.content || result.data || result;
+    const banners = Array.isArray(content.banners)
+      ? content.banners
+      : [];
+
+    state.banners = banners.filter((banner) => {
+      return banner.enabled !== false &&
+        banner.active !== false;
     });
 
-    currentUser = result.user;
-
-    const name = currentUser.name || "User";
-
-    $("#welcomeName").textContent = name;
-    $("#sideName").textContent = name;
-    $("#accountDisplayName").textContent = name;
-    $("#profileName").value = name;
-
-    updateAvatar($("#userInitial"), name, getSavedPhoto());
-    updateAvatar($("#accountInitial"), name, getSavedPhoto());
-
-    message.textContent = "প্রোফাইল আপডেট হয়েছে।";
+    renderBanners();
 
   } catch (error) {
-    message.textContent = error.message;
-
-  } finally {
-    button.disabled = false;
+    console.info("Banner content unavailable:", error.message);
+    container.innerHTML = "";
   }
-});
+}
 
-// ========================================
-// PROFILE PHOTO
-// Saved locally in this browser only.
-// Image is resized before saving.
-// ========================================
+function renderBanners() {
+  const container = $("#homeBanners");
 
-function compressImage(file) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const reader = new FileReader();
+  if (!state.banners.length) {
+    container.innerHTML = "";
+    return;
+  }
 
-    reader.onload = () => {
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxSize = 420;
+  container.innerHTML = state.banners.map((banner) => {
+    const title = banner.title || "";
+    const description = banner.description || "";
+    const imageUrl = banner.imageUrl || banner.image || "";
 
-        let width = image.width;
-        let height = image.height;
-
-        if (width > height && width > maxSize) {
-          height = Math.round(height * maxSize / width);
-          width = maxSize;
-        } else if (height > maxSize) {
-          width = Math.round(width * maxSize / height);
-          height = maxSize;
+    return `
+      <article class="managed-banner">
+        ${title ? `<h3>${escapeHTML(title)}</h3>` : ""}
+        ${description ? `<p>${escapeHTML(description)}</p>` : ""}
+        ${
+          imageUrl
+            ? `<img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(title || "RS PAY banner")}" loading="lazy">`
+            : ""
         }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const context = canvas.getContext("2d");
-        context.drawImage(image, 0, 0, width, height);
-
-        resolve(canvas.toDataURL("image/jpeg", 0.78));
-      };
-
-      image.onerror = () => reject(new Error("ছবিটি পড়া যায়নি।"));
-      image.src = reader.result;
-    };
-
-    reader.onerror = () => reject(new Error("ছবি লোড করা যায়নি।"));
-    reader.readAsDataURL(file);
-  });
+      </article>
+    `;
+  }).join("");
 }
 
-$("#profilePhotoInput").addEventListener("change", async event => {
-  const file = event.target.files?.[0];
-  const message = $("#photoMessage");
+/* ---------- START APPLICATION ---------- */
 
-  if (!file) return;
-
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    message.textContent = "JPG, PNG অথবা WEBP ছবি নির্বাচন করুন।";
-    event.target.value = "";
-    return;
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    message.textContent = "ছবির সাইজ ৫ MB-এর কম হতে হবে।";
-    event.target.value = "";
-    return;
-  }
-
-  message.textContent = "ছবি প্রস্তুত হচ্ছে…";
-
-  try {
-    const compressed = await compressImage(file);
-    localStorage.setItem("rsPayProfilePhoto", compressed);
-    updateProfilePhotoUI();
-    message.textContent = "প্রোফাইল ছবি সংরক্ষণ হয়েছে।";
-
-  } catch (error) {
-    message.textContent = error.message ||
-      "ছবি সংরক্ষণ করা যায়নি।";
-
-  } finally {
-    event.target.value = "";
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  restoreTheme();
+  restoreSession();
 });
-
-$("#removePhotoBtn").addEventListener("click", () => {
-  try {
-    localStorage.removeItem("rsPayProfilePhoto");
-    updateProfilePhotoUI();
-    $("#photoMessage").textContent = "প্রোফাইল ছবি সরানো হয়েছে।";
-  } catch {
-    $("#photoMessage").textContent = "ছবি সরানো যায়নি।";
-  }
-});
-
-// ========================================
-// THEME COLOR
-// Saved locally in this browser only.
-// ========================================
-
-function applyTheme(color) {
-  document.documentElement.style.setProperty("--accent", color);
-
-  try {
-    localStorage.setItem("rsPayTheme", color);
-  } catch {}
-
-  $$(".theme-choice").forEach(button => {
-    button.classList.toggle(
-      "selected",
-      button.dataset.theme === color
-    );
-  });
-}
-
-$$(".theme-choice").forEach(button => {
-  button.addEventListener("click", () => {
-    applyTheme(button.dataset.theme);
-  });
-});
-
-try {
-  const savedTheme = localStorage.getItem("rsPayTheme");
-  if (savedTheme) applyTheme(savedTheme);
-} catch {}
-
-// ========================================
-// FOOTER YEAR
-// ========================================
-
-$("#year").textContent = new Date().getFullYear();
-
-// ========================================
-// START APPLICATION
-// ========================================
-
-loadManagedContent();
-restoreSession();
