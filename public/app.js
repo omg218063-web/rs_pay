@@ -1,394 +1,213 @@
-const landingScreen = document.getElementById("landingScreen");
-const authScreen = document.getElementById("authScreen");
-const appScreen = document.getElementById("appScreen");
-
-const loginForm = document.getElementById("loginForm");
-const registerForm = document.getElementById("registerForm");
-
-const loginTab = document.getElementById("loginTab");
-const registerTab = document.getElementById("registerTab");
-
-const authTitle = document.getElementById("authTitle");
-const authSubtitle = document.getElementById("authSubtitle");
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
 
 let currentUser = null;
-
-function showToast(message) {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3000);
-}
 
 async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
     credentials: "same-origin",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options
   });
 
   const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data.message || "কোনো সমস্যা হয়েছে।");
-  }
-
+  if (!response.ok) throw new Error(data.message || "Something went wrong");
   return data;
 }
 
-// Show landing page
-function showLanding() {
-  landingScreen.classList.remove("hidden");
-  authScreen.classList.add("hidden");
-  appScreen.classList.add("hidden");
-
-  window.scrollTo({ top: 0, behavior: "instant" });
+function showToast(message) {
+  const toast = $("#toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2600);
 }
 
-// Open login or registration
-function openAuth(mode = "register") {
-  landingScreen.classList.add("hidden");
-  appScreen.classList.add("hidden");
-  authScreen.classList.remove("hidden");
-
-  switchAuth(mode);
-
-  window.scrollTo({ top: 0, behavior: "instant" });
+function showScreen(screen) {
+  ["#landingScreen", "#authScreen", "#appScreen"].forEach(id =>
+    $(id).classList.add("hidden")
+  );
+  $(screen).classList.remove("hidden");
 }
 
-// Back to landing page
-document.getElementById("backToLanding").addEventListener("click", () => {
-  showLanding();
-});
-
-// All Get Started and Login buttons
-document.querySelectorAll("[data-open-auth]").forEach(button => {
-  button.addEventListener("click", () => {
-    openAuth(button.dataset.openAuth);
-    document.getElementById("landingNav").classList.remove("open");
-  });
-});
-
-// Mobile navigation menu
-document.getElementById("menuToggle").addEventListener("click", () => {
-  document.getElementById("landingNav").classList.toggle("open");
-});
-
-// Close mobile menu after selecting a link
-document.querySelectorAll(".landing-nav a").forEach(link => {
-  link.addEventListener("click", () => {
-    document.getElementById("landingNav").classList.remove("open");
-  });
-});
-
-// Switch between login and registration
-function switchAuth(mode) {
-  const isRegister = mode === "register";
-
-  loginForm.classList.toggle("hidden", isRegister);
-  registerForm.classList.toggle("hidden", !isRegister);
-
-  loginTab.classList.toggle("active", !isRegister);
-  registerTab.classList.toggle("active", isRegister);
-
-  authTitle.textContent = isRegister
-    ? "Create Your Account"
-    : "Welcome Back!";
-
-  authSubtitle.textContent = isRegister
-    ? "নতুন RS PAY অ্যাকাউন্ট তৈরি করুন"
-    : "আপনার RS PAY অ্যাকাউন্টে প্রবেশ করুন";
+function showAuth(mode = "login") {
+  showScreen("#authScreen");
+  $("#loginForm").classList.toggle("hidden", mode !== "login");
+  $("#registerForm").classList.toggle("hidden", mode !== "register");
+  $("#loginTab").classList.toggle("active", mode === "login");
+  $("#registerTab").classList.toggle("active", mode === "register");
 }
 
-loginTab.addEventListener("click", () => switchAuth("login"));
-registerTab.addEventListener("click", () => switchAuth("register"));
-
-function initials(name) {
-  return String(name || "RS")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(word => word[0])
-    .join("")
-    .toUpperCase();
-}
-
-// Theme customization
-function setTheme(theme) {
-  document.body.dataset.theme = theme;
-
-  document.querySelectorAll(".theme-dot").forEach(button => {
-    button.classList.toggle(
-      "selected",
-      button.dataset.theme === theme
-    );
-  });
-}
-
-// Show dashboard after successful login
 function showApp(user) {
   currentUser = user;
-
-  landingScreen.classList.add("hidden");
-  authScreen.classList.add("hidden");
-  appScreen.classList.remove("hidden");
-
-  const userInitials = initials(user.name);
-
-  document.getElementById("homeName").textContent = user.name;
-  document.getElementById("profileName").textContent = user.name;
-  document.getElementById("profilePhone").textContent = user.phone;
-  document.getElementById("editName").value = user.name;
-
-  document.getElementById("profileAvatar").textContent = userInitials;
-  document.getElementById("headerProfile").textContent = userInitials;
-
-  updateVerificationStatus(user);
-
-  setTheme(user.theme || "purple");
+  showScreen("#appScreen");
+  $("#welcomeName").textContent = user.name;
+  $("#profileName").value = user.name;
+  $("#profilePhone").value = user.phone;
+  $("#themeSelect").value = user.theme || "purple";
+  $("#verificationStatus").textContent =
+    "Verification status: " + (user.verificationStatus || "unverified");
+  $("#accountShortcut").textContent =
+    user.name.split(" ").map(x => x[0]).join("").slice(0, 2).toUpperCase();
+  document.body.dataset.theme = user.theme || "purple";
   openPage("homePage");
-
-  window.scrollTo({ top: 0, behavior: "instant" });
+  loadServices();
 }
 
-function updateVerificationStatus(user) {
-  const phoneStatus = document.getElementById("phoneStatus");
-  const accountStatus = document.getElementById("accountStatus");
-
-  phoneStatus.textContent = user.phoneVerified
-    ? "Verified"
-    : "Not Verified";
-
-  phoneStatus.className = user.phoneVerified
-    ? "verified"
-    : "pending";
-
-  accountStatus.textContent = user.accountVerified
-    ? "Verified"
-    : "Not Verified";
-
-  accountStatus.className = user.accountVerified
-    ? "verified"
-    : "pending";
-}
-
-// Dashboard navigation
 function openPage(pageId) {
-  document.querySelectorAll(".page").forEach(page => {
-    page.classList.add("hidden");
+  $$(".page").forEach(page => page.classList.add("hidden"));
+  $("#" + pageId).classList.remove("hidden");
+
+  $$(".nav-item").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === pageId);
   });
-
-  const target = document.getElementById(pageId);
-
-  if (!target) return;
-
-  target.classList.remove("hidden");
-
-  document.querySelectorAll(".nav-item").forEach(button => {
-    button.classList.toggle(
-      "active",
-      button.dataset.page === pageId
-    );
-  });
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-document.querySelectorAll(".nav-item").forEach(button => {
-  button.addEventListener("click", () => {
-    openPage(button.dataset.page);
-  });
-});
-
-document.getElementById("headerProfile").addEventListener("click", () => {
-  openPage("accountPage");
-});
-
-// Registration
-registerForm.addEventListener("submit", async event => {
-  event.preventDefault();
-
-  const formData = new FormData(registerForm);
-
-  const name = String(formData.get("name") || "").trim();
-  const phone = String(formData.get("phone") || "").trim();
-  const password = String(formData.get("password") || "");
-  const confirmPassword = String(
-    formData.get("confirmPassword") || ""
-  );
-
-  if (password !== confirmPassword) {
-    showToast("দুটি পাসওয়ার্ড মিলছে না।");
-    return;
-  }
-
-  if (password.length < 8) {
-    showToast("পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের দিন।");
-    return;
-  }
-
-  const button = registerForm.querySelector("button[type='submit']");
-  button.disabled = true;
-  button.textContent = "অ্যাকাউন্ট তৈরি হচ্ছে...";
-
+async function loadServices() {
   try {
-    const data = await apiRequest("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        phone,
-        password
-      })
-    });
+    const data = await apiRequest("/api/services");
+    const html = data.services.map(service => `
+      <article class="service-card">
+        <h3>${escapeHtml(service.name)}</h3>
+        <p class="muted">Preview only</p>
+      </article>
+    `).join("");
 
-    registerForm.reset();
-    showApp(data.user);
-    showToast(data.message || "অ্যাকাউন্ট তৈরি হয়েছে।");
-
-  } catch (error) {
-    showToast(error.message);
-
-  } finally {
-    button.disabled = false;
-    button.innerHTML = 'অ্যাকাউন্ট তৈরি করুন <span>→</span>';
+    $("#dashboardServices").innerHTML = html;
+    $("#servicesList").innerHTML = html;
+  } catch {
+    showToast("Could not load services");
   }
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#039;"
+  })[char]);
+}
+
+async function loadSiteContent() {
+  try {
+    const data = await apiRequest("/api/site-content");
+    const landing = data.content.landing || {};
+
+    if (landing.title) $("#landingTitle").textContent = landing.title;
+    if (landing.subtitle) $("#landingSubtitle").textContent = landing.subtitle;
+    if (landing.buttonText) $("#getStarted").textContent = landing.buttonText;
+
+    const bannerHtml = (data.banners || []).map(banner => `
+      <article class="banner">
+        ${banner.imageUrl ? `<img src="${escapeHtml(banner.imageUrl)}" alt="">` : ""}
+        <h3>${escapeHtml(banner.title)}</h3>
+        <p>${escapeHtml(banner.description)}</p>
+        ${banner.linkUrl ? `<a href="${escapeHtml(banner.linkUrl)}" target="_blank" rel="noopener"> ${escapeHtml(banner.buttonText || "View")} </a>` : ""}
+      </article>
+    `).join("");
+
+    $("#landingBanners").innerHTML = bannerHtml;
+    $("#dashboardBanners").innerHTML = bannerHtml;
+  } catch {
+    console.log("Using default site content");
+  }
+}
+
+$("#headerLogin").addEventListener("click", () => showAuth("login"));
+$("#getStarted").addEventListener("click", () => showAuth("register"));
+$("#backHome").addEventListener("click", () => showScreen("#landingScreen"));
+$("#loginTab").addEventListener("click", () => showAuth("login"));
+$("#registerTab").addEventListener("click", () => showAuth("register"));
+$("#accountShortcut").addEventListener("click", () => openPage("accountPage"));
+
+$$(".nav-item").forEach(button => {
+  button.addEventListener("click", () => openPage(button.dataset.page));
 });
 
-// Login
-loginForm.addEventListener("submit", async event => {
+$("#loginForm").addEventListener("submit", async event => {
   event.preventDefault();
-
-  const formData = new FormData(loginForm);
-
-  const phone = String(formData.get("phone") || "").trim();
-  const password = String(formData.get("password") || "");
-
-  const button = loginForm.querySelector("button[type='submit']");
-  button.disabled = true;
-  button.textContent = "Login হচ্ছে...";
+  const form = new FormData(event.currentTarget);
 
   try {
     const data = await apiRequest("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({
-        phone,
-        password
-      })
+      body: JSON.stringify(Object.fromEntries(form))
     });
-
-    loginForm.reset();
     showApp(data.user);
-    showToast(data.message || "Login সফল হয়েছে।");
-
+    showToast("Login successful");
   } catch (error) {
     showToast(error.message);
-
-  } finally {
-    button.disabled = false;
-    button.innerHTML = 'Login করুন <span>→</span>';
   }
 });
 
-// Update profile name
-document.getElementById("saveProfile").addEventListener("click", async () => {
-  const name = document.getElementById("editName").value.trim();
+$("#registerForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
 
+  try {
+    const data = await apiRequest("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(Object.fromEntries(form))
+    });
+    showApp(data.user);
+    showToast("Account created");
+  } catch (error) {
+    showToast(error.message);
+  }
+});
+
+$("#saveProfile").addEventListener("click", async () => {
   try {
     const data = await apiRequest("/api/profile", {
-      method: "PATCH",
-      body: JSON.stringify({ name })
+      method: "PUT",
+      body: JSON.stringify({
+        name: $("#profileName").value,
+        theme: $("#themeSelect").value
+      })
     });
-
     showApp(data.user);
-    openPage("accountPage");
-    showToast("প্রোফাইল আপডেট হয়েছে।");
-
+    showToast("Profile saved");
   } catch (error) {
     showToast(error.message);
   }
 });
 
-// Save selected theme
-document.querySelectorAll(".theme-dot").forEach(button => {
-  button.addEventListener("click", async () => {
-    const theme = button.dataset.theme;
-
-    try {
-      const data = await apiRequest("/api/profile", {
-        method: "PATCH",
-        body: JSON.stringify({ theme })
-      });
-
-      showApp(data.user);
-      openPage("accountPage");
-      showToast("নতুন থিম সংরক্ষণ হয়েছে।");
-
-    } catch (error) {
-      showToast(error.message);
-    }
-  });
+$("#themeSelect").addEventListener("change", event => {
+  document.body.dataset.theme = event.target.value;
 });
 
-// Verification details
-document.getElementById("verifyButton").addEventListener("click", async () => {
+$("#verificationButton").addEventListener("click", async () => {
   try {
-    await apiRequest("/api/verification/request", {
+    const data = await apiRequest("/api/verification/request", {
       method: "POST",
       body: JSON.stringify({})
     });
-
+    $("#verificationStatus").textContent = "Verification status: pending";
+    showToast(data.message);
   } catch (error) {
     showToast(error.message);
   }
 });
 
-// Service cards
-document.querySelectorAll("[data-service]").forEach(button => {
-  button.addEventListener("click", () => {
-    const service = button.dataset.service;
-
-    showToast(
-      service + " সার্ভিসের API এখনো সংযুক্ত করা হয়নি।"
-    );
-  });
-});
-
-// Logout
-document.getElementById("logoutButton").addEventListener("click", async () => {
+$("#logoutButton").addEventListener("click", async () => {
   try {
     await apiRequest("/api/auth/logout", {
       method: "POST",
       body: JSON.stringify({})
     });
-
+  } finally {
     currentUser = null;
-
-    showLanding();
-    switchAuth("login");
-
-    showToast("আপনি সফলভাবে Logout করেছেন।");
-
-  } catch (error) {
-    showToast(error.message);
+    showScreen("#landingScreen");
+    showToast("Logged out");
   }
 });
 
-// Check previous login session
 async function checkSession() {
   try {
     const data = await apiRequest("/api/auth/me");
     showApp(data.user);
-
-  } catch (error) {
-    showLanding();
+  } catch {
+    showScreen("#landingScreen");
   }
 }
 
+loadSiteContent();
 checkSession();
