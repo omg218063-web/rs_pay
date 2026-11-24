@@ -1,247 +1,368 @@
 
-const API = "";
-const $ = (id) => document.getElementById(id);
+const $ = (selector) => document.querySelector(selector);
 
-let currentUser = null;
+const landingView = $("#landingView");
+const dashboardView = $("#dashboardView");
+const modal = $("#authModal");
+const form = $("#authForm");
+
 let authMode = "login";
-let serviceItems = [];
 
-async function request(url, options = {}) {
-  const response = await fetch(API + url, {
+function setMode(mode) {
+  authMode = mode;
+  const registering = mode === "register";
+
+  $("#authTitle").textContent = registering
+    ? "নতুন অ্যাকাউন্ট তৈরি করুন"
+    : "অ্যাকাউন্টে প্রবেশ করুন";
+
+  $("#authIntro").textContent = registering
+    ? "নিচের তথ্য দিয়ে RS PAY অ্যাকাউন্ট খুলুন।"
+    : "আপনার অ্যাকাউন্টে প্রবেশ করতে তথ্য দিন।";
+
+  $("#nameLabel").classList.toggle("hidden", !registering);
+  $("#nameInput").required = registering;
+  $("#verifyNote").classList.toggle("hidden", !registering);
+
+  $("#passwordInput").autocomplete = registering
+    ? "new-password"
+    : "current-password";
+
+  $("#submitAuth").textContent = registering
+    ? "অ্যাকাউন্ট তৈরি করুন →"
+    : "লগইন করুন →";
+
+  $("#loginTab").classList.toggle("active", !registering);
+  $("#registerTab").classList.toggle("active", registering);
+  $("#formMessage").textContent = "";
+}
+
+function openModal(mode) {
+  setMode(mode);
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+  modal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function showDashboard(user) {
+  landingView.classList.add("hidden");
+  dashboardView.classList.remove("hidden");
+
+  const name = user.name || "User";
+  const phone = user.phone || "মোবাইল নম্বর যোগ করা হয়নি";
+  const initial = name.trim().charAt(0).toUpperCase();
+
+  $("#welcomeName").textContent = name;
+  $("#sideName").textContent = name;
+  $("#sideEmail").textContent = phone;
+  $("#userInitial").textContent = initial;
+  $("#accountInitial").textContent = initial;
+  $("#accountDisplayName").textContent = name;
+  $("#accountDisplayEmail").textContent = phone;
+  $("#profileName").value = name;
+  $("#profileEmail").value = user.phone || "";
+
+  closeModal();
+  showDashTab("overview");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showLanding() {
+  dashboardView.classList.add("hidden");
+  landingView.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showDashTab(tab) {
+  const overview = $("#overview");
+  const account = $("#accountPanel");
+
+  overview.classList.toggle("hidden", tab === "account");
+  account.classList.toggle("hidden", tab !== "account");
+
+  document.querySelectorAll("[data-dash-tab]").forEach(link => {
+    link.classList.toggle("active", link.dataset.dashTab === tab);
+  });
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
     ...options
   });
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "অনুরোধ সম্পন্ন হয়নি");
+
+  if (!response.ok) {
+    throw new Error(data.message || "অনুরোধটি সম্পন্ন হয়নি।");
+  }
+
   return data;
 }
 
-function toast(message) {
-  const el = $("toast");
-  if (!el) return;
-  el.textContent = message;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2800);
-}
+// Login এবং Register বাটন
+document.querySelectorAll("[data-open]").forEach(button => {
+  button.addEventListener("click", () => {
+    openModal(button.dataset.open);
+  });
+});
 
-function showLanding() {
-  $("landingPage").classList.remove("hidden");
-  $("dashboardPage").classList.add("hidden");
-}
+$("#closeModal").addEventListener("click", closeModal);
 
-function showDashboard(user) {
-  currentUser = user;
-  $("landingPage").classList.add("hidden");
-  $("dashboardPage").classList.remove("hidden");
-  $("welcomeText").textContent = `স্বাগতম, ${user.name || "User"}`;
-  $("profileName").value = user.name || "";
-  $("profileEmail").value = user.email || "";
-  $("adminShortcut").classList.toggle("hidden", user.role !== "admin");
-  openTab("home");
-}
+$("#loginTab").addEventListener("click", () => setMode("login"));
+$("#registerTab").addEventListener("click", () => setMode("register"));
 
-function openTab(tab) {
-  document.querySelectorAll(".dash-tab").forEach(el => el.classList.add("hidden"));
-  document.querySelectorAll(".side-link[data-tab]").forEach(el => el.classList.remove("active"));
-  $(`tab-${tab}`)?.classList.remove("hidden");
-  document.querySelector(`.side-link[data-tab="${tab}"]`)?.classList.add("active");
-}
+modal.addEventListener("click", event => {
+  if (event.target === modal) closeModal();
+});
 
-function openAuth(mode) {
-  authMode = mode;
-  $("authModal").classList.remove("hidden");
-  $("authTitle").textContent = mode === "login" ? "লগইন করুন" : "অ্যাকাউন্ট তৈরি করুন";
-  $("authSubmit").textContent = mode === "login" ? "লগইন" : "রেজিস্ট্রেশন";
-  $("nameField").classList.toggle("hidden", mode === "login");
-  $("authName").required = mode === "register";
-  $("authPassword").autocomplete = mode === "login" ? "current-password" : "new-password";
-  $("authMessage").textContent = "";
-}
+// Registration এবং Login
+form.addEventListener("submit", async event => {
+  event.preventDefault();
 
-function closeAuth() {
-  $("authModal").classList.add("hidden");
-  $("authForm").reset();
-}
+  const message = $("#formMessage");
+  const submit = $("#submitAuth");
 
-function renderServices(items, targetId) {
-  const target = $(targetId);
-  if (!target) return;
+  message.textContent = "অনুগ্রহ করে অপেক্ষা করুন…";
+  submit.disabled = true;
 
-  target.innerHTML = "";
-  if (!items.length) {
-    target.innerHTML = '<p class="empty-state">এখন কোনো সার্ভিস পাওয়া যাচ্ছে না।</p>';
-    return;
+  const payload = {
+    phone: $("#phoneInput").value.trim(),
+    password: $("#passwordInput").value
+  };
+
+  if (authMode === "register") {
+    payload.name = $("#nameInput").value.trim();
   }
 
-  items.forEach(item => {
-    const card = document.createElement("article");
-    card.className = "service-card";
+  try {
+    const result = await api(
+      `/api/auth/${authMode === "register" ? "register" : "login"}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
+    );
 
-    const icon = document.createElement("div");
-    icon.className = "service-icon";
-    icon.textContent = item.icon || "✦";
+    form.reset();
+    showDashboard(result.user);
 
-    const title = document.createElement("h3");
-    title.textContent = item.name || "Service";
+  } catch (error) {
+    message.textContent = error.message;
 
-    const description = document.createElement("p");
-    description.textContent = item.description || "ডিজিটাল সার্ভিস";
+  } finally {
+    submit.disabled = false;
+  }
+});
 
-    const button = document.createElement("button");
-    button.className = "btn btn-outline";
-    button.textContent = "বিস্তারিত";
-    button.addEventListener("click", () => {
-      toast("এই সার্ভিসটি বর্তমানে শুধু তথ্য দেখানোর জন্য রয়েছে।");
+// Logout
+$("#logoutBtn").addEventListener("click", async () => {
+  try {
+    await api("/api/auth/logout", {
+      method: "POST",
+      body: "{}"
     });
-
-    card.append(icon, title, description, button);
-    target.appendChild(card);
-  });
-}
-
-async function loadServices() {
-  try {
-    const data = await request("/api/services");
-    serviceItems = (data.services || data || []).filter(item => item.enabled !== false);
-    renderServices(serviceItems, "serviceGrid");
-    renderServices(serviceItems, "dashServiceGrid");
-  } catch {
-    $("serviceGrid").innerHTML = '<p class="empty-state">সার্ভিস লোড করা যায়নি।</p>';
+  } catch (error) {
+    console.error(error);
   }
-}
 
-function renderBanners(banners, targetId) {
-  const target = $(targetId);
-  if (!target) return;
-  target.innerHTML = "";
+  showLanding();
+});
 
-  (banners || []).filter(b => b.enabled !== false).forEach(banner => {
-    const card = document.createElement("a");
-    card.className = "managed-banner";
-    card.href = banner.link || "#";
-    card.target = banner.link ? "_blank" : "_self";
-    card.rel = "noopener noreferrer";
+// Mobile menu
+$("#mobileMenu").addEventListener("click", () => {
+  $(".topbar").classList.toggle("mobile-open");
+});
 
-    if (banner.imageUrl) {
-      const image = document.createElement("img");
-      image.src = banner.imageUrl;
-      image.alt = banner.title || "RS PAY banner";
-      image.loading = "lazy";
-      card.appendChild(image);
-    } else {
-      const heading = document.createElement("h3");
-      heading.textContent = banner.title || "RS PAY";
-      card.appendChild(heading);
-      const description = document.createElement("p");
-      description.textContent = banner.description || "";
-      card.appendChild(description);
-    }
-    target.appendChild(card);
-  });
-}
-
-async function loadContent() {
+// আগের Login Session পুনরুদ্ধার
+async function restoreSession() {
   try {
-    const data = await request("/api/content");
-    const content = data.content || data;
-    if (content.heroTitle) $("heroTitle").textContent = content.heroTitle;
-    if (content.heroSubtitle) $("heroSubtitle").textContent = content.heroSubtitle;
-  } catch {}
-
-  try {
-    const data = await request("/api/banners");
-    const banners = data.banners || data || [];
-    renderBanners(banners.filter(b => b.position === "landing_top" || b.position === "landing_middle"), "landingBanners");
-    renderBanners(banners.filter(b => b.position === "dashboard_home"), "dashboardBanners");
-  } catch {}
-}
-
-async function checkSession() {
-  try {
-    const data = await request("/api/me");
-    if (data.user) showDashboard(data.user);
-    else showLanding();
+    const result = await api("/api/auth/me");
+    showDashboard(result.user);
   } catch {
     showLanding();
   }
 }
 
-async function logout() {
-  try {
-    await request("/api/auth/logout", { method: "POST", body: "{}" });
-  } catch {}
-  currentUser = null;
-  showLanding();
-  toast("আপনি লগআউট করেছেন।");
+// নিরাপদ Text
+function safeText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
 }
 
-$("authForm").addEventListener("submit", async event => {
+// Admin Panel থেকে পাঠানো Website Content
+async function loadManagedContent() {
+  try {
+    const [contentResult, serviceResult] = await Promise.all([
+      api("/api/site-content"),
+      api("/api/services")
+    ]);
+
+    const content = contentResult.content || {};
+    const landing = content.landing || {};
+
+    if (landing.title) {
+      $("#managedLandingTitle").textContent = landing.title;
+    }
+
+    if (landing.subtitle) {
+      $("#managedLandingSubtitle").textContent = landing.subtitle;
+    }
+
+    if (landing.buttonText) {
+      $("#landingCta").innerHTML =
+        `${safeText(landing.buttonText)} <span>→</span>`;
+
+      $("#howCta").textContent = `${landing.buttonText} →`;
+    }
+
+    const banners = contentResult.banners || [];
+
+    function renderBanners(slot, selector) {
+      const host = $(selector);
+      if (!host) return;
+
+      const selected = banners.filter(
+        banner => banner.slot === slot && banner.enabled
+      );
+
+      if (!selected.length) {
+        host.classList.add("hidden");
+        host.innerHTML = "";
+        return;
+      }
+
+      host.classList.remove("hidden");
+
+      host.innerHTML = selected.map(banner => `
+        <article class="managed-banner">
+          <div>
+            <span class="section-kicker">RS PAY UPDATE</span>
+            <h3>${safeText(banner.title)}</h3>
+            <p>${safeText(banner.description)}</p>
+
+            ${banner.linkUrl ? `
+              <a class="btn btn-gold"
+                 href="${safeText(banner.linkUrl)}"
+                 target="_blank"
+                 rel="noopener noreferrer">
+                ${safeText(banner.buttonText || "বিস্তারিত দেখুন")} ↗
+              </a>
+            ` : ""}
+          </div>
+
+          ${banner.imageUrl ? `
+            <img src="${safeText(banner.imageUrl)}"
+                 alt="${safeText(banner.title)}"
+                 loading="lazy">
+          ` : ""}
+        </article>
+      `).join("");
+    }
+
+    renderBanners("landing_top", "#landingTopBanners");
+    renderBanners("landing_middle", "#landingMiddleBanners");
+    renderBanners("dashboard_home", "#dashboardBanners");
+
+    const services = (serviceResult.services || [])
+      .filter(item => item.enabled !== false);
+
+    const landingGrid = $("#landingServiceGrid");
+
+    if (landingGrid && services.length) {
+      landingGrid.innerHTML = services.map(item => `
+        <article class="service-card managed-service-card">
+          <div class="service-icon">${safeText(item.icon || "◇")}</div>
+          <h3>${safeText(item.name)}</h3>
+          <p>${safeText(item.description || "সেবা বিভাগ")}</p>
+          <span class="card-arrow">↗</span>
+        </article>
+      `).join("");
+    }
+
+    const dashboardGrid = $("#dashboardServiceGrid");
+
+    if (dashboardGrid && services.length) {
+      dashboardGrid.innerHTML = services.map(item => `
+        <div>
+          ${safeText(item.icon || "◇")}
+          <b>${safeText(item.name)}</b>
+          <small>সেবা বিভাগ</small>
+        </div>
+      `).join("");
+    }
+
+  } catch (error) {
+    console.warn(
+      "RS PAY content load error:",
+      error.message
+    );
+  }
+}
+
+// Dashboard Tabs
+document.querySelectorAll("[data-dash-tab]").forEach(link => {
+  link.addEventListener("click", event => {
+    event.preventDefault();
+    showDashTab(link.dataset.dashTab);
+  });
+});
+
+// Account Profile Update
+$("#profileForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const payload = {
-    email: $("authEmail").value.trim(),
-    password: $("authPassword").value
-  };
 
-  if (authMode === "register") payload.name = $("authName").value.trim();
+  const message = $("#profileMessage");
+  const button = event.currentTarget.querySelector(
+    'button[type="submit"]'
+  );
 
-  $("authSubmit").disabled = true;
-  $("authMessage").textContent = "অপেক্ষা করুন...";
+  button.disabled = true;
+  message.textContent = "সংরক্ষণ হচ্ছে…";
 
   try {
-    const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
-    const data = await request(endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload)
+    const result = await api("/api/account/profile", {
+      method: "PUT",
+      body: JSON.stringify({
+        name: $("#profileName").value.trim()
+      })
     });
-    closeAuth();
-    if (data.user) showDashboard(data.user);
-    else await checkSession();
-    toast("সফলভাবে সম্পন্ন হয়েছে।");
+
+    const name = result.user.name;
+    const initial = name.trim().charAt(0).toUpperCase();
+
+    $("#welcomeName").textContent = name;
+    $("#sideName").textContent = name;
+    $("#accountDisplayName").textContent = name;
+    $("#profileName").value = name;
+    $("#userInitial").textContent = initial;
+    $("#accountInitial").textContent = initial;
+
+    message.textContent = "প্রোফাইল আপডেট হয়েছে।";
+
   } catch (error) {
-    $("authMessage").textContent = error.message;
+    message.textContent = error.message;
+
   } finally {
-    $("authSubmit").disabled = false;
+    button.disabled = false;
   }
 });
 
-$("profileForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  try {
-    const data = await request("/api/me", {
-      method: "PATCH",
-      body: JSON.stringify({ name: $("profileName").value.trim() })
-    });
-    if (data.user) showDashboard(data.user);
-    $("profileMessage").textContent = "প্রোফাইল আপডেট হয়েছে।";
-  } catch (error) {
-    $("profileMessage").textContent = error.message;
-  }
-});
+// Website Content Load
+loadManagedContent();
 
-$("loginOpen").addEventListener("click", () => openAuth("login"));
-$("registerOpen").addEventListener("click", () => openAuth("register"));
-$("heroRegister").addEventListener("click", () => openAuth("register"));
-$("modalClose").addEventListener("click", closeAuth);
-$("authSwitch").addEventListener("click", () => openAuth(authMode === "login" ? "register" : "login"));
-$("logoutBtn").addEventListener("click", logout);
-$("dashLogout").addEventListener("click", logout);
-
-document.querySelectorAll(".side-link[data-tab]").forEach(button => {
-  button.addEventListener("click", () => openTab(button.dataset.tab));
-});
-
-$("menuToggle").addEventListener("click", () => {
-  document.querySelector(".topbar nav").classList.toggle("nav-open");
-});
-
-$("authModal").addEventListener("click", event => {
-  if (event.target === $("authModal")) closeAuth();
-});
-
-$("year").textContent = new Date().getFullYear();
-
-loadServices();
-loadContent();
-checkSession();
+// Existing Login Session Check
+restoreSession();
