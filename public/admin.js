@@ -1,211 +1,303 @@
-const admin$ = selector => document.querySelector(selector);
 
-async function adminApi(url, options = {}) {
+const $ = id => document.getElementById(id);
+
+async function api(url, options = {}) {
   const response = await fetch(url, {
     credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
+    headers: { "Content-Type": "application/json" },
     ...options
   });
-
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "Request failed");
+  if (!response.ok) throw new Error(data.message || "কাজটি সম্পন্ন হয়নি");
   return data;
 }
 
-function adminMessage(message) {
-  admin$("#loginMessage").textContent = message;
+function message(id, text) {
+  $(id).textContent = text;
 }
 
-function escapeAdmin(value) {
-  return String(value || "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;",
-    '"': "&quot;", "'": "&#039;"
-  })[char]);
+function safeText(value) {
+  return String(value ?? "");
 }
 
-function showAdminDashboard() {
-  admin$("#adminLogin").classList.add("hidden");
-  admin$("#adminDashboard").classList.remove("hidden");
-  loadAdminData();
+function addListItem(container, title, description, status, buttons = []) {
+  const item = document.createElement("article");
+  item.className = "list-item";
+
+  const info = document.createElement("div");
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const detail = document.createElement("p");
+  detail.textContent = description || "";
+  const state = document.createElement("span");
+  state.className = "status";
+  state.textContent = status || "";
+  info.append(heading, detail, state);
+
+  const actions = document.createElement("div");
+  actions.className = "list-actions";
+  buttons.forEach(({ label, action }) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", action);
+    actions.appendChild(button);
+  });
+
+  item.append(info, actions);
+  container.appendChild(item);
 }
 
-async function checkAdminSession() {
+async function checkAdmin() {
   try {
-    await adminApi("/api/admin/me");
-    showAdminDashboard();
+    await api("/api/admin/me");
+    showAdmin();
   } catch {
-    admin$("#adminLogin").classList.remove("hidden");
-    admin$("#adminDashboard").classList.add("hidden");
+    $("adminLogin").classList.remove("hidden");
+    $("adminDashboard").classList.add("hidden");
   }
 }
 
-admin$("#adminLoginForm").addEventListener("submit", async event => {
+function showAdmin() {
+  $("adminLogin").classList.add("hidden");
+  $("adminDashboard").classList.remove("hidden");
+  loadContent();
+  loadBanners();
+  loadServices();
+  loadUsers();
+}
+
+$("adminLoginForm").addEventListener("submit", async event => {
   event.preventDefault();
-
+  message("loginMessage", "অপেক্ষা করুন...");
   try {
-    await adminApi("/api/admin/login", {
+    await api("/api/admin/login", {
       method: "POST",
-      body: JSON.stringify({
-        password: admin$("#adminPassword").value
-      })
+      body: JSON.stringify({ password: $("adminPassword").value })
     });
-
-    admin$("#adminPassword").value = "";
-    adminMessage("");
-    showAdminDashboard();
+    $("adminPassword").value = "";
+    showAdmin();
   } catch (error) {
-    adminMessage(error.message);
+    message("loginMessage", error.message);
   }
 });
 
-admin$("#adminLogout").addEventListener("click", async () => {
+$("adminLogout").addEventListener("click", async () => {
   try {
-    await adminApi("/api/admin/logout", {
-      method: "POST",
-      body: JSON.stringify({})
-    });
-  } finally {
-    admin$("#adminDashboard").classList.add("hidden");
-    admin$("#adminLogin").classList.remove("hidden");
-    adminMessage("You have logged out.");
-  }
+    await api("/api/admin/logout", { method: "POST", body: "{}" });
+  } catch {}
+  $("adminDashboard").classList.add("hidden");
+  $("adminLogin").classList.remove("hidden");
 });
 
-async function loadStats() {
-  const data = await adminApi("/api/admin/stats");
-  admin$("#totalUsers").textContent = data.totalUsers;
-  admin$("#verifiedUsers").textContent = data.verifiedUsers;
-  admin$("#recentUsers").textContent = data.recentUsers;
-}
+document.querySelectorAll(".admin-tabs button").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".admin-tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
+    button.classList.add("active");
+    $(button.dataset.panel).classList.remove("hidden");
+  });
+});
 
 async function loadContent() {
-  const data = await adminApi("/api/admin/site-content");
-  const content = data.content || {};
-  const landing = content.landing || {};
-  const colors = content.colors || {};
-
-  admin$("#siteTitle").value = landing.title || "";
-  admin$("#siteSubtitle").value = landing.subtitle || "";
-  admin$("#siteButtonText").value = landing.buttonText || "";
-  admin$("#siteButtonLink").value = landing.buttonLink || "#register";
-  admin$("#primaryColor").value = colors.primary || "#7547c9";
-  admin$("#secondaryColor").value = colors.secondary || "#eac16d";
+  try {
+    const data = await api("/api/admin/content");
+    const content = data.content || data;
+    $("heroTitleInput").value = content.heroTitle || "";
+    $("heroSubtitleInput").value = content.heroSubtitle || "";
+  } catch (error) {
+    message("contentMessage", error.message);
+  }
 }
 
-async function loadBanners() {
-  const data = await adminApi("/api/admin/banners");
-  const banners = data.banners || [];
-
-  admin$("#bannerList").innerHTML = banners.map(banner => `
-    <div class="banner-row">
-      <strong>${escapeAdmin(banner.slot)}</strong>
-      <p>${escapeAdmin(banner.title)}</p>
-      <button type="button" data-edit-slot="${escapeAdmin(banner.slot)}">
-        Load this banner into editor
-      </button>
-    </div>
-  `).join("") || "<p>No banners saved yet.</p>";
-
-  admin$("#bannerList").querySelectorAll("[data-edit-slot]").forEach(button => {
-    button.addEventListener("click", () => {
-      const selected = banners.find(item => item.slot === button.dataset.editSlot);
-      if (!selected) return;
-
-      admin$("#bannerSlot").value = selected.slot;
-      admin$("#bannerTitle").value = selected.title || "";
-      admin$("#bannerDescription").value = selected.description || "";
-      admin$("#bannerImage").value = selected.imageUrl || "";
-      admin$("#bannerLink").value = selected.linkUrl || "";
-      admin$("#bannerButton").value = selected.buttonText || "";
-      admin$("#bannerEnabled").checked = selected.enabled === true;
-
-      admin$("#bannerForm").scrollIntoView({ behavior: "smooth" });
+$("contentForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  try {
+    await api("/api/admin/content", {
+      method: "PUT",
+      body: JSON.stringify({
+        heroTitle: $("heroTitleInput").value.trim(),
+        heroSubtitle: $("heroSubtitleInput").value.trim()
+      })
     });
-  });
+    message("contentMessage", "ওয়েবসাইটের লেখা আপডেট হয়েছে।");
+  } catch (error) {
+    message("contentMessage", error.message);
+  }
+});
+
+function resetBannerForm() {
+  $("bannerForm").reset();
+  $("bannerId").value = "";
+  $("bannerEnabled").checked = true;
+}
+
+$("bannerReset").addEventListener("click", resetBannerForm);
+
+async function loadBanners() {
+  try {
+    const data = await api("/api/admin/banners");
+    const banners = data.banners || [];
+    const list = $("bannerList");
+    list.innerHTML = "";
+
+    banners.forEach(banner => {
+      addListItem(
+        list,
+        safeText(banner.title),
+        `${banner.position || ""} • ${banner.imageUrl || "No image"}`,
+        banner.enabled ? "Enabled" : "Disabled",
+        [
+          { label: "Edit", action: () => editBanner(banner) },
+          { label: "Delete", action: () => deleteBanner(banner._id) }
+        ]
+      );
+    });
+  } catch (error) {
+    message("bannerMessage", error.message);
+  }
+}
+
+function editBanner(banner) {
+  $("bannerId").value = banner._id || "";
+  $("bannerTitle").value = banner.title || "";
+  $("bannerDescription").value = banner.description || "";
+  $("bannerImage").value = banner.imageUrl || "";
+  $("bannerLink").value = banner.link || "";
+  $("bannerPosition").value = banner.position || "landing_top";
+  $("bannerEnabled").checked = banner.enabled !== false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("bannerForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const id = $("bannerId").value;
+  const payload = {
+    title: $("bannerTitle").value.trim(),
+    description: $("bannerDescription").value.trim(),
+    imageUrl: $("bannerImage").value.trim(),
+    link: $("bannerLink").value.trim(),
+    position: $("bannerPosition").value,
+    enabled: $("bannerEnabled").checked
+  };
+
+  try {
+    await api(id ? `/api/admin/banners/${encodeURIComponent(id)}` : "/api/admin/banners", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload)
+    });
+    resetBannerForm();
+    message("bannerMessage", "Banner সংরক্ষণ হয়েছে।");
+    loadBanners();
+  } catch (error) {
+    message("bannerMessage", error.message);
+  }
+});
+
+async function deleteBanner(id) {
+  if (!id || !confirm("এই ব্যানারটি মুছে ফেলবেন?")) return;
+  try {
+    await api(`/api/admin/banners/${encodeURIComponent(id)}`, { method: "DELETE" });
+    loadBanners();
+  } catch (error) {
+    message("bannerMessage", error.message);
+  }
+}
+
+function resetServiceForm() {
+  $("serviceForm").reset();
+  $("serviceId").value = "";
+  $("serviceEnabled").checked = true;
+}
+
+$("serviceReset").addEventListener("click", resetServiceForm);
+
+async function loadServices() {
+  try {
+    const data = await api("/api/admin/services");
+    const list = $("serviceList");
+    list.innerHTML = "";
+
+    (data.services || []).forEach(service => {
+      addListItem(
+        list,
+        `${service.icon || "✦"} ${service.name}`,
+        service.description || "",
+        service.enabled ? "Enabled" : "Disabled",
+        [
+          { label: "Edit", action: () => editService(service) },
+          { label: "Delete", action: () => deleteService(service._id) }
+        ]
+      );
+    });
+  } catch (error) {
+    message("serviceMessage", error.message);
+  }
+}
+
+function editService(service) {
+  $("serviceId").value = service._id || "";
+  $("serviceName").value = service.name || "";
+  $("serviceDescription").value = service.description || "";
+  $("serviceIcon").value = service.icon || "";
+  $("serviceEnabled").checked = service.enabled !== false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("serviceForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const id = $("serviceId").value;
+  const payload = {
+    name: $("serviceName").value.trim(),
+    description: $("serviceDescription").value.trim(),
+    icon: $("serviceIcon").value.trim(),
+    enabled: $("serviceEnabled").checked
+  };
+
+  try {
+    await api(id ? `/api/admin/services/${encodeURIComponent(id)}` : "/api/admin/services", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload)
+    });
+    resetServiceForm();
+    message("serviceMessage", "সার্ভিস সংরক্ষণ হয়েছে।");
+    loadServices();
+  } catch (error) {
+    message("serviceMessage", error.message);
+  }
+});
+
+async function deleteService(id) {
+  if (!id || !confirm("এই সার্ভিসটি মুছে ফেলবেন?")) return;
+  try {
+    await api(`/api/admin/services/${encodeURIComponent(id)}`, { method: "DELETE" });
+    loadServices();
+  } catch (error) {
+    message("serviceMessage", error.message);
+  }
 }
 
 async function loadUsers() {
-  const data = await adminApi("/api/admin/users");
-  const users = data.users || [];
-
-  admin$("#usersTable").innerHTML = users.map(user => `
-    <tr>
-      <td>${escapeAdmin(user.name)}</td>
-      <td>${escapeAdmin(user.phone)}</td>
-      <td>${escapeAdmin(user.verificationStatus)}</td>
-      <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-    </tr>
-  `).join("") || '<tr><td colspan="4">No users found</td></tr>';
-}
-
-async function loadAdminData() {
   try {
-    await Promise.all([loadStats(), loadContent(), loadBanners(), loadUsers()]);
-  } catch (error) {
-    adminMessage(error.message);
-  }
-}
+    const data = await api("/api/admin/users");
+    const list = $("userList");
+    list.innerHTML = "";
 
-admin$("#contentForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  try {
-    await adminApi("/api/admin/site-content", {
-      method: "PUT",
-      body: JSON.stringify({
-        landing: {
-          title: admin$("#siteTitle").value,
-          subtitle: admin$("#siteSubtitle").value,
-          buttonText: admin$("#siteButtonText").value,
-          buttonLink: admin$("#siteButtonLink").value
-        },
-        colors: {
-          primary: admin$("#primaryColor").value,
-          secondary: admin$("#secondaryColor").value
-        }
-      })
+    (data.users || []).forEach(user => {
+      addListItem(
+        list,
+        user.name || "Unnamed User",
+        user.email || "",
+        user.role || "user"
+      );
     });
 
-    alert("Website settings saved.");
+    if (!data.users?.length) {
+      list.textContent = "এখনো কোনো ব্যবহারকারী পাওয়া যায়নি।";
+    }
   } catch (error) {
-    alert(error.message);
+    $("userList").textContent = error.message;
   }
-});
+}
 
-admin$("#bannerForm").addEventListener("submit", async event => {
-  event.preventDefault();
-
-  try {
-    const slot = admin$("#bannerSlot").value;
-
-    await adminApi("/api/admin/banners/" + encodeURIComponent(slot), {
-      method: "PUT",
-      body: JSON.stringify({
-        title: admin$("#bannerTitle").value,
-        description: admin$("#bannerDescription").value,
-        imageUrl: admin$("#bannerImage").value,
-        linkUrl: admin$("#bannerLink").value,
-        buttonText: admin$("#bannerButton").value,
-        enabled: admin$("#bannerEnabled").checked
-      })
-    });
-
-    alert("Banner saved.");
-    await loadBanners();
-  } catch (error) {
-    alert(error.message);
-  }
-});
-
-admin$("#refreshUsers").addEventListener("click", async () => {
-  try {
-    await loadUsers();
-  } catch (error) {
-    alert(error.message);
-  }
-});
-
-checkAdminSession();
+checkAdmin();
