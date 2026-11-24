@@ -1,123 +1,106 @@
+
 <!DOCTYPE html>
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RS PAY - Admin Panel</title>
+  <title>RS PAY | Admin Panel</title>
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-  <header class="admin-header">
-    <a href="/" class="brand">RS <span>PAY</span></a>
-    <span>ADMIN PANEL</span>
-  </header>
-
-  <main class="admin-container">
-    <section id="adminLogin" class="admin-card login-card">
+  <main class="admin-wrap">
+    <section class="login-box" id="adminLogin">
+      <div class="logo">RS <span>PAY</span></div>
       <h1>Admin Login</h1>
-      <p>Enter your administrator password.</p>
+      <p>আপনার অ্যাডমিন পাসওয়ার্ড দিয়ে প্রবেশ করুন।</p>
       <form id="adminLoginForm">
         <label>Admin Password</label>
-        <input id="adminPassword" type="password" required>
-        <button class="admin-btn" type="submit">Login</button>
+        <input id="adminPassword" type="password" required autocomplete="current-password">
+        <button type="submit">LOGIN</button>
+        <p id="loginMessage"></p>
       </form>
-      <p id="loginMessage" class="message"></p>
     </section>
 
     <section id="adminDashboard" class="hidden">
-      <div class="admin-title">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Manage RS PAY website settings.</p>
-        </div>
-        <button id="adminLogout" class="logout-btn">Logout</button>
+      <header class="admin-header">
+        <div class="logo">RS <span>PAY</span></div>
+        <div><span>ADMIN CONTROL PANEL</span><button id="adminLogout">Logout</button></div>
+      </header>
+
+      <div class="admin-intro">
+        <div><small>CONTROL CENTER</small><h1>Admin Dashboard</h1><p>আপনার ওয়েবসাইটের কনটেন্ট ও সার্ভিস পরিচালনা করুন।</p></div>
       </div>
 
-      <div class="stats-grid">
-        <article class="stat-card"><span>Total Users</span><strong id="totalUsers">—</strong></article>
-        <article class="stat-card"><span>Verified Users</span><strong id="verifiedUsers">—</strong></article>
-        <article class="stat-card"><span>New This Week</span><strong id="recentUsers">—</strong></article>
-      </div>
+      <nav class="admin-tabs">
+        <button class="active" data-panel="contentPanel">Website Content</button>
+        <button data-panel="bannerPanel">Banners</button>
+        <button data-panel="servicePanel">Services</button>
+        <button data-panel="userPanel">Users</button>
+      </nav>
 
-      <section class="admin-card">
-        <h2>Website Editor</h2>
+      <section class="panel" id="contentPanel">
+        <h2>Landing Page Content</h2>
         <form id="contentForm">
-          <label>Landing Page Title</label>
-          <input id="siteTitle" maxlength="100">
-          <label>Subtitle</label>
-          <textarea id="siteSubtitle" maxlength="250"></textarea>
-          <label>Button Text</label>
-          <input id="siteButtonText" maxlength="40">
-          <label>Button Link</label>
-          <input id="siteButtonLink" maxlength="200">
-          <div class="two-columns">
-            <div>
-              <label>Primary Color</label>
-              <input id="primaryColor" type="color" value="#7547c9">
-            </div>
-            <div>
-              <label>Secondary Color</label>
-              <input id="secondaryColor" type="color" value="#eac16d">
-            </div>
-          </div>
-          <button class="admin-btn" type="submit">Save Website Settings</button>
+          <label>Hero Title</label>
+          <input id="heroTitleInput" maxlength="180">
+          <label>Hero Subtitle</label>
+          <textarea id="heroSubtitleInput" maxlength="500"></textarea>
+          <button type="submit">Save Content</button>
+          <p class="message" id="contentMessage"></p>
         </form>
       </section>
 
-      <section class="admin-card">
-        <h2>Banner Manager</h2>
-        <p class="hint">Use an image URL from a trusted source. Uploading files is not included in this version.</p>
+      <section class="panel hidden" id="bannerPanel">
+        <h2>Banner Management</h2>
         <form id="bannerForm">
-          <label>Banner Position</label>
-          <select id="bannerSlot">
-            <option value="landing_top">Landing Page - Top</option>
-            <option value="landing_middle">Landing Page - Middle</option>
-            <option value="dashboard_home">Dashboard Home</option>
-          </select>
+          <input type="hidden" id="bannerId">
           <label>Banner Title</label>
-          <input id="bannerTitle" maxlength="100">
+          <input id="bannerTitle" required maxlength="100">
           <label>Description</label>
           <textarea id="bannerDescription" maxlength="300"></textarea>
           <label>Image URL</label>
-          <input id="bannerImage" type="url" placeholder="https://example.com/image.jpg">
-          <label>Button Link URL</label>
-          <input id="bannerLink" type="url" placeholder="https://example.com">
-          <label>Button Text</label>
-          <input id="bannerButton" maxlength="40">
-          <label class="check-label">
-            <input id="bannerEnabled" type="checkbox">
-            Enable this banner
-          </label>
-          <button class="admin-btn" type="submit">Save Banner</button>
+          <input id="bannerImage" type="url" placeholder="https://example.com/banner.jpg">
+          <label>Link URL (optional)</label>
+          <input id="bannerLink" type="url">
+          <label>Position</label>
+          <select id="bannerPosition">
+            <option value="landing_top">Landing Top</option>
+            <option value="landing_middle">Landing Middle</option>
+            <option value="dashboard_home">Dashboard Home</option>
+          </select>
+          <label class="check"><input id="bannerEnabled" type="checkbox" checked> Enabled</label>
+          <button type="submit">Save Banner</button>
+          <button type="button" class="secondary" id="bannerReset">Clear</button>
+          <p class="message" id="bannerMessage"></p>
         </form>
-        <div id="bannerList"></div>
+        <div id="bannerList" class="admin-list"></div>
       </section>
 
-      <section class="admin-card">
-        <h2>User Manager</h2>
-        <button id="refreshUsers" class="admin-btn secondary">Refresh Users</button>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Name</th><th>Phone</th><th>Status</th><th>Joined</th></tr>
-            </thead>
-            <tbody id="usersTable">
-              <tr><td colspan="4">No user data loaded</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <section class="panel hidden" id="servicePanel">
+        <h2>Service Management</h2>
+        <form id="serviceForm">
+          <input type="hidden" id="serviceId">
+          <label>Service Name</label>
+          <input id="serviceName" required maxlength="80">
+          <label>Description</label>
+          <textarea id="serviceDescription" maxlength="250"></textarea>
+          <label>Icon (Emoji)</label>
+          <input id="serviceIcon" maxlength="8" placeholder="✦">
+          <label class="check"><input id="serviceEnabled" type="checkbox" checked> Enabled</label>
+          <button type="submit">Save Service</button>
+          <button type="button" class="secondary" id="serviceReset">Clear</button>
+          <p class="message" id="serviceMessage"></p>
+        </form>
+        <div id="serviceList" class="admin-list"></div>
       </section>
 
-      <section class="admin-card">
-        <h2>Wallet Overview</h2>
-        <p class="hint">
-          Wallet, deposits, withdrawals and real-money transactions are not enabled.
-          No actual balance or payment can be managed here.
-        </p>
+      <section class="panel hidden" id="userPanel">
+        <h2>Registered Users</h2>
+        <p>এখানে শুধু অ্যাকাউন্টের তালিকা দেখা যাবে।</p>
+        <div id="userList" class="admin-list"></div>
       </section>
     </section>
   </main>
-
   <script src="admin.js"></script>
 </body>
 </html>
