@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#160d2b">
+  <title>RS PAY | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+
+  <!-- ADMIN LOGIN -->
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="brand-mark">RS</div>
+      <p class="eyebrow">RS PAY CONTROL CENTER</p>
+      <h1>Admin Login</h1>
+      <p class="muted">আপনার Admin Password দিয়ে প্রবেশ করুন।</p>
+
+      <form id="adminLoginForm">
+        <label for="adminPassword">Admin Password</label>
+        <input id="adminPassword" type="password"
+          placeholder="Enter admin password"
+          autocomplete="current-password" required>
+        <button class="primary-btn full" type="submit">
+          Secure Login <span>→</span>
+        </button>
+      </form>
+      <a class="back-link" href="/">← Back to RS PAY</a>
+    </div>
+  </section>
+
+  <!-- ADMIN APP -->
+  <div id="adminApp" class="admin-layout hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">
+        <div class="brand-mark small">RS</div>
+        <div><strong>RS PAY</strong><small>ADMIN PANEL</small></div>
+      </div>
+
+      <nav class="side-nav">
+        <button class="side-link active" data-page="dashboardPage">▦ <span>Dashboard</span></button>
+        <button class="side-link" data-page="bannersPage">▧ <span>Banner Manager</span></button>
+        <button class="side-link" data-page="websitePage">✎ <span>Website Editor</span></button>
+        <button class="side-link" data-page="usersPage">♙ <span>User Manager</span></button>
+        <button class="side-link" data-page="walletPage">◈ <span>Wallet Overview</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <a href="/" class="side-link">↗ <span>Visit Website</span></a>
+        <button id="logoutButton" class="side-link logout">⇥ <span>Logout</span></button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button id="menuButton" class="menu-button" aria-label="Menu">☰</button>
+        <div>
+          <p class="eyebrow">RS PAY MANAGEMENT</p>
+          <h2 id="pageHeading">Dashboard</h2>
+        </div>
+        <div class="admin-chip"><span></span> Administrator</div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section id="dashboardPage" class="admin-page">
+        <div class="welcome-panel">
+          <div>
+            <p class="eyebrow">CONTROL CENTER</p>
+            <h1>Welcome to RS PAY</h1>
+            <p>আপনার ওয়েবসাইটের সার্বিক অবস্থা এক জায়গায় দেখুন।</p>
+          </div>
+          <div class="welcome-icon">✦</div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-icon">♙</span>
+            <p>Total Users</p>
+            <h2 id="totalUsers">—</h2>
+            <small>নিবন্ধিত অ্যাকাউন্ট</small>
+          </article>
+          <article class="stat-card">
+            <span class="stat-icon">✓</span>
+            <p>Verified Users</p>
+            <h2 id="verifiedUsers">—</h2>
+            <small>যাচাইকৃত অ্যাকাউন্ট</small>
+          </article>
+          <article class="stat-card">
+            <span class="stat-icon">＋</span>
+            <p>New Users</p>
+            <h2 id="recentUsers">—</h2>
+            <small>গত ৭ দিনে</small>
+          </article>
+          <article class="stat-card">
+            <span class="stat-icon">▤</span>
+            <p>Orders</p>
+            <h2 id="totalOrders">Not Connected</h2>
+            <small>Order database প্রয়োজন</small>
+          </article>
+        </div>
+
+        <div class="content-card">
+          <div class="section-heading">
+            <div><p class="eyebrow">QUICK ACCESS</p><h3>Management Center</h3></div>
+          </div>
+          <div class="quick-grid">
+            <button class="quick-card" data-page="bannersPage"><span>▧</span><strong>Manage Banners</strong><small>ছবি ও লিংক পরিবর্তন</small></button>
+            <button class="quick-card" data-page="websitePage"><span>✎</span><strong>Edit Website</strong><small>লেখা ও রং পরিবর্তন</small></button>
+            <button class="quick-card" data-page="usersPage"><span>♙</span><strong>View Users</strong><small>অ্যাকাউন্ট তালিকা</small></button>
+            <button class="quick-card" data-page="walletPage"><span>◈</span><strong>Wallet Overview</strong><small>হিসাবের অবস্থা</small></button>
+          </div>
+        </div>
+        <p class="notice">নোট: এখানে কেবল সার্ভারে সংরক্ষিত প্রকৃত তথ্য দেখানো হবে। এখনো Order ও Wallet Ledger সংযুক্ত হয়নি।</p>
+      </section>
+
+      <!-- BANNERS -->
+      <section id="bannersPage" class="admin-page hidden">
+        <div class="page-intro">
+          <p class="eyebrow">PROMOTION CONTROL</p>
+          <h1>Banner Manager</h1>
+          <p>তিনটি নির্দিষ্ট জায়গার ব্যানার আলাদাভাবে নিয়ন্ত্রণ করুন।</p>
+        </div>
+
+        <div class="banner-grid">
+          <article class="content-card banner-editor" data-slot="landing_top">
+            <span class="slot-tag">BANNER 01</span>
+            <h3>Landing Page – Top</h3>
+            <div class="preview-box"><img class="banner-preview" alt="Banner preview"><span>Image Preview</span></div>
+            <label>Banner Title</label>
+            <input data-field="title" placeholder="আপনার শিরোনাম">
+            <label>Description</label>
+            <textarea data-field="description" rows="2" placeholder="ব্যানারের বিবরণ"></textarea>
+            <label>Image URL</label>
+            <input data-field="imageUrl" type="url" placeholder="https://example.com/banner.jpg">
+            <label>Button Text</label>
+            <input data-field="buttonText" placeholder="Learn More">
+            <label>Click Link</label>
+            <input data-field="linkUrl" type="url" placeholder="https://example.com">
+            <label class="toggle-row"><input data-field="enabled" type="checkbox"> ব্যানার চালু রাখুন</label>
+            <button class="primary-btn save-banner">Save Banner</button>
+          </article>
+
+          <article class="content-card banner-editor" data-slot="landing_middle">
+            <span class="slot-tag">BANNER 02</span>
+            <h3>Landing Page – Middle</h3>
+            <div class="preview-box"><img class="banner-preview" alt="Banner preview"><span>Image Preview</span></div>
+            <label>Banner Title</label>
+            <input data-field="title" placeholder="আপনার শিরোনাম">
+            <label>Description</label>
+            <textarea data-field="description" rows="2" placeholder="ব্যানারের বিবরণ"></textarea>
+            <label>Image URL</label>
+            <input data-field="imageUrl" type="url" placeholder="https://example.com/banner.jpg">
+            <label>Button Text</label>
+            <input data-field="buttonText" placeholder="Learn More">
+            <label>Click Link</label>
+            <input data-field="linkUrl" type="url" placeholder="https://example.com">
+            <label class="toggle-row"><input data-field="enabled" type="checkbox"> ব্যানার চালু রাখুন</label>
+            <button class="primary-btn save-banner">Save Banner</button>
+          </article>
+
+          <article class="content-card banner-editor" data-slot="dashboard_home">
+            <span class="slot-tag">BANNER 03</span>
+            <h3>Dashboard Home</h3>
+            <div class="preview-box"><img class="banner-preview" alt="Banner preview"><span>Image Preview</span></div>
+            <label>Banner Title</label>
+            <input data-field="title" placeholder="আপনার শিরোনাম">
+            <label>Description</label>
+            <textarea data-field="description" rows="2" placeholder="ব্যানারের বিবরণ"></textarea>
+            <label>Image URL</label>
+            <input data-field="imageUrl" type="url" placeholder="https://example.com/banner.jpg">
+            <label>Button Text</label>
+            <input data-field="buttonText" placeholder="Learn More">
+            <label>Click Link</label>
+            <input data-field="linkUrl" type="url" placeholder="https://example.com">
+            <label class="toggle-row"><input data-field="enabled" type="checkbox"> ব্যানার চালু রাখুন</label>
+            <button class="primary-btn save-banner">Save Banner</button>
+          </article>
+        </div>
+      </section>
+
+      <!-- WEBSITE EDITOR -->
+      <section id="websitePage" class="admin-page hidden">
+        <div class="page-intro">
+          <p class="eyebrow">WEBSITE CUSTOMIZATION</p>
+          <h1>Website Editor</h1>
+          <p>Landing Page-এর লেখা ও মূল রং পরিবর্তন করুন।</p>
+        </div>
+
+        <div class="content-card editor-card">
+          <h3>Landing Page Content</h3>
+          <label>Main Heading</label>
+          <input id="landingTitle" maxlength="120">
+          <label>Subtitle</label>
+          <textarea id="landingSubtitle" rows="3" maxlength="500"></textarea>
+          <label>Get Started Button Text</label>
+          <input id="landingButton" maxlength="40">
+          <label>Button Link</label>
+          <input id="landingButtonLink" type="url" placeholder="https://example.com">
+        </div>
+
+        <div class="content-card editor-card">
+          <h3>Website Colors</h3>
+          <div class="color-grid">
+            <div><label>Primary Color</label><input id="primaryColor" type="color" value="#7138d5"></div>
+            <div><label>Secondary Color</label><input id="secondaryColor" type="color" value="#d7ad55"></div>
+          </div>
+          <button id="saveWebsite" class="primary-btn">Save Website Settings</button>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section id="usersPage" class="admin-page hidden">
+        <div class="page-intro">
+          <p class="eyebrow">ACCOUNT MANAGEMENT</p>
+          <h1>User Manager</h1>
+          <p>নিবন্ধিত ইউজারদের তথ্য দেখুন।</p>
+        </div>
+        <div class="content-card">
+          <div class="section-heading">
+            <h3>Registered Users</h3>
+            <button id="refreshUsers" class="outline-btn">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Phone</th><th>Verification</th><th>Joined</th></tr></thead>
+              <tbody id="usersTable">
+                <tr><td colspan="4">তথ্য লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- WALLET -->
+      <section id="walletPage" class="admin-page hidden">
+        <div class="page-intro">
+          <p class="eyebrow">WALLET INFORMATION</p>
+          <h1>Wallet Overview</h1>
+          <p>ওয়ালেট ডেটাবেস তৈরি হলে এখানে প্রকৃত হিসাব দেখা যাবে।</p>
+        </div>
+        <div class="content-card wallet-placeholder">
+          <div class="wallet-symbol">◈</div>
+          <h2>Wallet Ledger Not Connected</h2>
+          <p>বর্তমান সার্ভারে Wallet Transaction Model নেই। তাই কোনো ব্যালেন্স বা লেনদেন দেখানো হচ্ছে না।</p>
+          <span class="status-pill">Waiting for Wallet Integration</span>
+        </div>
+      </section>
+
+      <footer class="admin-footer">RS PAY Admin Control Center · Secure Access</footer>
+    </main>
+  </div>
+
+  <script src="/admin.js" defer></script>
+</body>
+                                                </html>
