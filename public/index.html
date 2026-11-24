@@ -1,135 +1,150 @@
+
 <!DOCTYPE html>
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#21133e">
-  <title>RS PAY - Digital Service Platform</title>
+  <meta name="theme-color" content="#10091f">
+  <title>RS PAY | Digital Services</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#">RS <span>PAY</span></a>
-    <button id="headerLogin" class="btn btn-outline">Login</button>
+    <a class="brand" href="#"><span>RS</span> PAY</a>
+    <nav>
+      <a href="#services">সার্ভিস</a>
+      <a href="#how">কীভাবে কাজ করে</a>
+      <a href="#about">আমাদের সম্পর্কে</a>
+    </nav>
+    <div class="top-actions">
+      <button class="btn btn-outline" id="loginOpen">লগইন</button>
+      <button class="btn btn-gold" id="registerOpen">রেজিস্ট্রেশন</button>
+    </div>
+    <button class="menu-toggle" id="menuToggle">☰</button>
   </header>
 
-  <main>
-    <section id="landingScreen">
-      <div class="hero">
+  <main id="landingPage">
+    <section class="hero">
+      <div class="hero-content">
         <span class="eyebrow">WELCOME TO RS PAY</span>
-        <h1 id="landingTitle">Your Digital Service Platform</h1>
-        <p id="landingSubtitle">
-          Mobile recharge and utility service information in one place.
-        </p>
-        <button id="getStarted" class="btn">Get Started</button>
+        <h1 id="heroTitle">আপনার ডিজিটাল সেবার<br><em>বিশ্বস্ত ঠিকানা</em></h1>
+        <p id="heroSubtitle">সহজ, সুন্দর ও আধুনিক ডিজিটাল সার্ভিস প্ল্যাটফর্ম।</p>
+        <div class="hero-buttons">
+          <button class="btn btn-gold btn-large" id="heroRegister">শুরু করুন</button>
+          <a class="btn btn-outline btn-large" href="#services">সার্ভিস দেখুন</a>
+        </div>
+        <div class="hero-note">✦ Premium Digital Experience</div>
       </div>
-
-      <section class="section">
-        <h2>Our Services</h2>
-        <div id="publicServices" class="service-grid">
-          <article class="service-card">📱<h3>Mobile Recharge</h3></article>
-          <article class="service-card">⚡<h3>Electricity</h3></article>
-          <article class="service-card">🔥<h3>Gas</h3></article>
-          <article class="service-card">💧<h3>Water / WASA</h3></article>
-          <article class="service-card">🌐<h3>Internet</h3></article>
-          <article class="service-card">🎓<h3>Education Fees</h3></article>
-        </div>
-        <p class="muted">Services are currently preview-only. Live transactions are not enabled.</p>
-      </section>
-
-      <section id="landingBanners" class="banner-list"></section>
-    </section>
-
-    <section id="authScreen" class="auth-wrap hidden">
-      <div class="auth-card">
-        <a class="brand" href="#">RS <span>PAY</span></a>
-        <div class="tabs">
-          <button id="loginTab" class="tab active">Login</button>
-          <button id="registerTab" class="tab">Register</button>
-        </div>
-
-        <form id="loginForm">
-          <h2>Welcome Back</h2>
-          <label>Mobile Number</label>
-          <input name="phone" type="tel" placeholder="01XXXXXXXXX" required>
-          <label>Password</label>
-          <input name="password" type="password" minlength="8" required>
-          <button class="btn full" type="submit">Login</button>
-        </form>
-
-        <form id="registerForm" class="hidden">
-          <h2>Create Account</h2>
-          <label>Full Name</label>
-          <input name="name" type="text" minlength="2" maxlength="60" required>
-          <label>Mobile Number</label>
-          <input name="phone" type="tel" placeholder="01XXXXXXXXX" required>
-          <label>Password</label>
-          <input name="password" type="password" minlength="8" maxlength="72" required>
-          <button class="btn full" type="submit">Create Account</button>
-        </form>
-        <button id="backHome" class="text-btn">Back to Home</button>
+      <div class="hero-art">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="hero-logo">RS<span>PAY</span></div>
+        <div class="floating-card card-one">⚡ দ্রুত সার্ভিস</div>
+        <div class="floating-card card-two">🔒 নিরাপদ অ্যাকাউন্ট</div>
       </div>
     </section>
 
-    <section id="appScreen" class="hidden">
-      <div class="dashboard-head">
-        <div>
-          <span class="muted">Welcome back,</span>
-          <h2 id="welcomeName">User</h2>
-        </div>
-        <button id="accountShortcut" class="avatar">RS</button>
+    <section class="section" id="services">
+      <div class="section-heading">
+        <span class="eyebrow">OUR SERVICES</span>
+        <h2>আমাদের <em>সার্ভিসসমূহ</em></h2>
+        <p>আপনার প্রয়োজনীয় ডিজিটাল সেবাগুলো এক জায়গায়।</p>
       </div>
+      <div class="service-grid" id="serviceGrid">
+        <div class="loading">সার্ভিস লোড হচ্ছে...</div>
+      </div>
+    </section>
 
-      <section id="homePage" class="page">
-        <div class="hero compact">
-          <span class="eyebrow">RS PAY DASHBOARD</span>
-          <h2>All your services in one place</h2>
-          <p>Choose a service to view its information.</p>
-        </div>
-        <div id="dashboardBanners" class="banner-list"></div>
-        <h2>Available Services</h2>
-        <div id="dashboardServices" class="service-grid"></div>
-      </section>
+    <section class="banner-area" id="landingBanners"></section>
 
-      <section id="servicesPage" class="page hidden">
-        <h2>Services</h2>
-        <div id="servicesList" class="service-grid"></div>
-        <p class="muted">No live recharge, bill payment or money transfer is available in this preview.</p>
-      </section>
+    <section class="section how-section" id="how">
+      <div class="section-heading">
+        <span class="eyebrow">HOW IT WORKS</span>
+        <h2>ব্যবহার করুন <em>সহজেই</em></h2>
+      </div>
+      <div class="steps">
+        <article class="step"><b>01</b><h3>অ্যাকাউন্ট তৈরি</h3><p>আপনার অ্যাকাউন্ট খুলুন।</p></article>
+        <article class="step"><b>02</b><h3>সার্ভিস নির্বাচন</h3><p>আপনার প্রয়োজনীয় সার্ভিস দেখুন।</p></article>
+        <article class="step"><b>03</b><h3>ড্যাশবোর্ড</h3><p>আপনার অ্যাকাউন্ট থেকে তথ্য পরিচালনা করুন।</p></article>
+      </div>
+    </section>
 
-      <section id="accountPage" class="page hidden">
-        <h2>My Account</h2>
-        <div class="panel">
-          <label>Full Name</label>
-          <input id="profileName" maxlength="60">
-          <label>Mobile Number</label>
-          <input id="profilePhone" disabled>
-          <label>Theme</label>
-          <select id="themeSelect">
-            <option value="purple">Purple + Gold</option>
-            <option value="blue">Blue</option>
-            <option value="green">Green</option>
-            <option value="rose">Rose</option>
-            <option value="dark">Dark</option>
-          </select>
-          <button id="saveProfile" class="btn full">Save Profile</button>
-        </div>
-        <div class="panel">
-          <h3>Account Verification</h3>
-          <p id="verificationStatus" class="muted">Not verified</p>
-          <button id="verificationButton" class="btn btn-outline">Request Review</button>
-        </div>
-        <button id="logoutButton" class="btn btn-danger full">Logout</button>
-      </section>
-
-      <nav class="bottom-nav">
-        <button data-page="homePage" class="nav-item active">⌂<span>Home</span></button>
-        <button data-page="servicesPage" class="nav-item">▦<span>Services</span></button>
-        <button data-page="accountPage" class="nav-item">◉<span>My Account</span></button>
-      </nav>
+    <section class="about-strip" id="about">
+      <div><span class="eyebrow">ABOUT RS PAY</span><h2>ডিজিটাল সেবার নতুন অভিজ্ঞতা</h2></div>
+      <p>RS PAY একটি আধুনিক ডিজিটাল সার্ভিস প্ল্যাটফর্মের ওয়েব ইন্টারফেস।</p>
     </section>
   </main>
 
+  <main id="dashboardPage" class="dashboard hidden">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span>RS</span> PAY</a>
+      <p class="side-label">MAIN MENU</p>
+      <button class="side-link active" data-tab="home">⌂ ড্যাশবোর্ড</button>
+      <button class="side-link" data-tab="services">▦ সার্ভিসসমূহ</button>
+      <button class="side-link" data-tab="account">♙ My Account</button>
+      <button class="side-link" id="logoutBtn">↪ লগআউট</button>
+      <a class="admin-shortcut hidden" id="adminShortcut" href="/admin.html">⚙ Admin Panel</a>
+    </aside>
+
+    <section class="dashboard-main">
+      <div class="dash-top">
+        <div><span class="eyebrow">RS PAY ACCOUNT</span><h2 id="welcomeText">স্বাগতম</h2></div>
+        <button class="btn btn-outline" id="dashLogout">লগআউট</button>
+      </div>
+
+      <section class="dash-tab" id="tab-home">
+        <div class="dash-welcome">
+          <div><span>YOUR DASHBOARD</span><h2>আপনার অ্যাকাউন্ট</h2><p>RS PAY-তে আপনাকে স্বাগতম।</p></div>
+          <div class="dash-mark">RS</div>
+        </div>
+        <div class="dash-stats">
+          <article><span>ACCOUNT STATUS</span><strong>Active</strong></article>
+          <article><span>ACCOUNT TYPE</span><strong>Standard</strong></article>
+        </div>
+        <div id="dashboardBanners" class="banner-area"></div>
+      </section>
+
+      <section class="dash-tab hidden" id="tab-services">
+        <h2>সার্ভিসসমূহ</h2>
+        <div class="service-grid" id="dashServiceGrid"></div>
+      </section>
+
+      <section class="dash-tab hidden" id="tab-account">
+        <h2>My Account</h2>
+        <form id="profileForm" class="profile-form">
+          <label>আপনার নাম</label>
+          <input id="profileName" required maxlength="60">
+          <label>ইমেইল</label>
+          <input id="profileEmail" disabled>
+          <button class="btn btn-gold" type="submit">প্রোফাইল আপডেট</button>
+          <p id="profileMessage" class="form-message"></p>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="authModal">
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose">×</button>
+      <a class="brand modal-brand"><span>RS</span> PAY</a>
+      <h2 id="authTitle">লগইন করুন</h2>
+      <form id="authForm">
+        <div id="nameField" class="hidden">
+          <label>আপনার নাম</label>
+          <input id="authName" maxlength="60">
+        </div>
+        <label>ইমেইল</label>
+        <input id="authEmail" type="email" required autocomplete="email">
+        <label>পাসওয়ার্ড</label>
+        <input id="authPassword" type="password" required minlength="8" autocomplete="current-password">
+        <button class="btn btn-gold btn-full" id="authSubmit" type="submit">লগইন</button>
+        <p id="authMessage" class="form-message"></p>
+      </form>
+      <p class="switch-auth" id="authSwitch">নতুন অ্যাকাউন্ট? <button type="button">রেজিস্ট্রেশন</button></p>
+    </div>
+  </div>
+
+  <footer><a class="brand" href="#"><span>RS</span> PAY</a><p>© <span id="year"></span> RS PAY. All rights reserved.</p></footer>
   <div id="toast" class="toast"></div>
   <script src="app.js"></script>
 </body>
