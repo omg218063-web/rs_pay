@@ -7,6 +7,7 @@ let usersCache = [];
 let bannersCache = [];
 let servicesCache = [];
 let bannerPreviewData = "";
+let servicePreviewData = "";
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -29,71 +30,52 @@ async function api(url, options = {}) {
   return data;
 }
 
-function showMessage(id, value) {
-  const element = $(id);
-  if (element) element.textContent = value;
+function message(id, text) {
+  if ($(id)) $(id).textContent = text;
 }
 
-function toast(value) {
-  const element = $("adminToast");
-  if (!element) return;
+function toast(text) {
+  const el = $("adminToast");
+  if (!el) return;
 
-  element.textContent = value;
-  element.classList.remove("hidden");
+  el.textContent = text;
+  el.classList.remove("hidden");
 
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => {
-    element.classList.add("hidden");
-  }, 3000);
+  toast.timer = setTimeout(() => el.classList.add("hidden"), 3000);
 }
 
 function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  })[char]);
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#039;"
+  })[c]);
 }
 
 function dateText(value) {
   if (!value) return "তথ্য নেই";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "তথ্য নেই";
-
-  return date.toLocaleDateString("bn-BD", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  });
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "তথ্য নেই"
+    : d.toLocaleDateString("bn-BD");
 }
 
 function timeText(value) {
   if (!value) return "কখনো অ্যাক্টিভ হয়নি";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "তথ্য নেই";
-
-  return date.toLocaleString("bn-BD", {
-    dateStyle: "short",
-    timeStyle: "short"
-  });
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "তথ্য নেই"
+    : d.toLocaleString("bn-BD");
 }
 
 function isOnline(user) {
-  if (!user.lastSeen) return false;
-
-  const last = new Date(user.lastSeen).getTime();
-
-  return Number.isFinite(last) &&
-    Date.now() - last <= 5 * 60 * 1000;
+  const last = new Date(user.lastSeen || 0).getTime();
+  return Number.isFinite(last) && Date.now() - last <= 5 * 60 * 1000;
 }
 
-/* LOGIN */
+// ============================================
+// LOGIN
+// ============================================
 
 async function checkAdmin() {
   try {
@@ -109,10 +91,8 @@ function showDashboard() {
   $("adminLogin").classList.add("hidden");
   $("adminDashboard").classList.remove("hidden");
 
-  const date = $("todayDate");
-  if (date) {
-    date.textContent = new Date().toLocaleDateString("bn-BD");
-  }
+  $("todayDate").textContent =
+    new Date().toLocaleDateString("bn-BD");
 
   loadDashboard();
   loadUsers();
@@ -127,8 +107,7 @@ $("adminLoginForm").addEventListener("submit", async event => {
   const button = $("loginButton");
   button.disabled = true;
   button.textContent = "প্রবেশ করা হচ্ছে...";
-
-  showMessage("loginMessage", "");
+  message("loginMessage", "");
 
   try {
     await api("/api/admin/login", {
@@ -141,9 +120,8 @@ $("adminLoginForm").addEventListener("submit", async event => {
     $("adminPassword").value = "";
     showDashboard();
     toast("অ্যাডমিন প্যানেলে স্বাগতম।");
-
   } catch (error) {
-    showMessage("loginMessage", error.message);
+    message("loginMessage", error.message);
   } finally {
     button.disabled = false;
     button.textContent = "নিরাপদে প্রবেশ করুন";
@@ -163,39 +141,35 @@ $("adminLogout").addEventListener("click", async () => {
   toast("লগআউট সম্পন্ন হয়েছে।");
 });
 
-/* NAVIGATION */
+// ============================================
+// NAVIGATION
+// ============================================
 
-function openPanel(panelId) {
+function openPanel(id) {
   document.querySelectorAll(".admin-panel").forEach(panel => {
     panel.classList.add("hidden");
   });
 
-  const target = $(panelId);
-  if (target) target.classList.remove("hidden");
+  $(id)?.classList.remove("hidden");
 
   document.querySelectorAll(".bottom-nav-item").forEach(button => {
-    button.classList.toggle(
-      "active",
-      button.dataset.panel === panelId
-    );
+    button.classList.toggle("active", button.dataset.panel === id);
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 document.querySelectorAll(".bottom-nav-item").forEach(button => {
-  button.addEventListener("click", () => {
-    openPanel(button.dataset.panel);
-  });
+  button.addEventListener("click", () => openPanel(button.dataset.panel));
 });
 
 document.querySelectorAll("[data-go]").forEach(button => {
-  button.addEventListener("click", () => {
-    openPanel(button.dataset.go);
-  });
+  button.addEventListener("click", () => openPanel(button.dataset.go));
 });
 
-/* DASHBOARD */
+// ============================================
+// DASHBOARD
+// ============================================
 
 async function loadDashboard() {
   try {
@@ -209,40 +183,30 @@ async function loadDashboard() {
     $("onlineUsers").textContent = online.toLocaleString("bn-BD");
     $("offlineUsers").textContent = offline.toLocaleString("bn-BD");
 
-    const onlinePercent = total
-      ? Math.round((online / total) * 100)
-      : 0;
+    const op = total ? Math.round(online / total * 100) : 0;
+    const fp = total ? Math.round(offline / total * 100) : 0;
 
-    const offlinePercent = total
-      ? Math.round((offline / total) * 100)
-      : 0;
-
-    $("onlinePercent").textContent = onlinePercent + "%";
-    $("offlinePercent").textContent = offlinePercent + "%";
-
-    $("onlineProgress").style.width = onlinePercent + "%";
-    $("offlineProgress").style.width = offlinePercent + "%";
+    $("onlinePercent").textContent = op + "%";
+    $("offlinePercent").textContent = fp + "%";
+    $("onlineProgress").style.width = op + "%";
+    $("offlineProgress").style.width = fp + "%";
 
     if (data.ordersAvailable) {
       $("totalOrders").textContent =
         Number(data.totalOrders || 0).toLocaleString("bn-BD");
-
       $("orderStatus").textContent = "রেকর্ড পাওয়া গেছে";
       $("orderInformation").textContent =
-        "অর্ডার রেকর্ড পাওয়া গেছে। বিস্তারিত অর্ডার মডেল সংযুক্ত হলে এখানে দেখানো যাবে।";
+        "অর্ডার রেকর্ড পাওয়া গেছে।";
     } else {
       $("totalOrders").textContent = "N/A";
-      $("orderStatus").textContent = "ডেটাবেস সংযুক্ত নেই";
+      $("orderStatus").textContent = "অর্ডার মডেল নেই";
       $("orderInformation").textContent =
-        "বর্তমান সার্ভারে অর্ডার ডেটাবেস মডেল নেই। তাই অর্ডারের সংখ্যা বা ইতিহাস দেখানো সম্ভব নয়।";
+        "বর্তমান সার্ভারে অর্ডার ডেটাবেস মডেল নেই। তাই অর্ডারের সংখ্যা দেখানো সম্ভব নয়।";
+      $("ordersPageInfo").textContent =
+        "বর্তমান সার্ভারে অর্ডার ডেটাবেস মডেল নেই।";
     }
 
-    if (Array.isArray(data.recentUsers)) {
-      renderRecentUsers(data.recentUsers);
-    } else {
-      await loadUsers();
-    }
-
+    renderRecentUsers(data.recentUsers || []);
   } catch (error) {
     $("totalUsers").textContent = "—";
     $("onlineUsers").textContent = "—";
@@ -269,11 +233,7 @@ function renderRecentUsers(users) {
     row.innerHTML = `
       <td>${escapeHTML(user.name || "নাম নেই")}</td>
       <td>${escapeHTML(user.phone || "নম্বর নেই")}</td>
-      <td>
-        <span class="status-pill ${online ? "status-online" : "status-offline"}">
-          ${online ? "অনলাইন" : "অফলাইন"}
-        </span>
-      </td>
+      <td><span class="status-pill ${online ? "status-online" : "status-offline"}">${online ? "অনলাইন" : "অফলাইন"}</span></td>
       <td>${escapeHTML(dateText(user.createdAt))}</td>
     `;
 
@@ -287,17 +247,16 @@ $("refreshDashboard").addEventListener("click", async () => {
   toast("ড্যাশবোর্ড আপডেট হয়েছে।");
 });
 
-/* USERS */
+// ============================================
+// USERS
+// ============================================
 
 async function loadUsers() {
   try {
     const data = await api("/api/admin/users");
-
     usersCache = data.users || [];
-
     renderUsers();
     renderRecentUsers(usersCache);
-
   } catch (error) {
     $("allUsers").innerHTML =
       `<tr><td colspan="5" class="empty-cell">${escapeHTML(error.message)}</td></tr>`;
@@ -309,18 +268,13 @@ function renderUsers() {
   const filter = $("userFilter").value;
 
   const filtered = usersCache.filter(user => {
-    const matchesSearch =
-      String(user.name || "").toLowerCase().includes(search) ||
-      String(user.phone || "").toLowerCase().includes(search);
-
+    const text = `${user.name || ""} ${user.phone || ""}`.toLowerCase();
     const online = isOnline(user);
 
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "online" && online) ||
-      (filter === "offline" && !online);
-
-    return matchesSearch && matchesFilter;
+    return text.includes(search) &&
+      (filter === "all" ||
+       (filter === "online" && online) ||
+       (filter === "offline" && !online));
   });
 
   const tbody = $("allUsers");
@@ -339,11 +293,7 @@ function renderUsers() {
     row.innerHTML = `
       <td>${escapeHTML(user.name || "নাম নেই")}</td>
       <td>${escapeHTML(user.phone || "নম্বর নেই")}</td>
-      <td>
-        <span class="status-pill ${online ? "status-online" : "status-offline"}">
-          ${online ? "অনলাইন" : "অফলাইন"}
-        </span>
-      </td>
+      <td><span class="status-pill ${online ? "status-online" : "status-offline"}">${online ? "অনলাইন" : "অফলাইন"}</span></td>
       <td>${escapeHTML(timeText(user.lastSeen))}</td>
       <td>${escapeHTML(dateText(user.createdAt))}</td>
     `;
@@ -360,15 +310,17 @@ $("refreshUsers").addEventListener("click", async () => {
   toast("কাস্টমার তালিকা আপডেট হয়েছে।");
 });
 
-/* BANNER IMAGE PREVIEW */
+// ============================================
+// IMAGE PREVIEW + UPLOAD
+// ============================================
 
-$("bannerFile").addEventListener("change", event => {
-  const file = event.target.files?.[0];
-
-  bannerPreviewData = "";
+function previewFile(file, imageId, placeholderId, setData) {
+  setData("");
 
   if (!file) {
-    resetImagePreview();
+    $(imageId).src = "";
+    $(imageId).classList.add("hidden");
+    $(placeholderId).classList.remove("hidden");
     return;
   }
 
@@ -376,62 +328,86 @@ $("bannerFile").addEventListener("change", event => {
 
   if (!allowed.includes(file.type)) {
     toast("JPG, PNG অথবা WEBP ছবি নির্বাচন করুন।");
-    event.target.value = "";
-    resetImagePreview();
-    return;
+    return false;
   }
 
   if (file.size > 1.2 * 1024 * 1024) {
     toast("ছবির সাইজ ১.২ MB-এর কম রাখুন।");
-    event.target.value = "";
-    resetImagePreview();
-    return;
+    return false;
   }
 
   const reader = new FileReader();
 
   reader.onload = () => {
-    bannerPreviewData = String(reader.result || "");
-
-    $("bannerPreview").src = bannerPreviewData;
-    $("bannerPreview").classList.remove("hidden");
-    $("previewPlaceholder").classList.add("hidden");
+    const data = String(reader.result || "");
+    setData(data);
+    $(imageId).src = data;
+    $(imageId).classList.remove("hidden");
+    $(placeholderId).classList.add("hidden");
   };
 
-  reader.onerror = () => {
-    toast("ছবি পড়া যায়নি।");
-  };
-
+  reader.onerror = () => toast("ছবি পড়া যায়নি।");
   reader.readAsDataURL(file);
-});
 
-function resetImagePreview() {
-  $("bannerPreview").src = "";
-  $("bannerPreview").classList.add("hidden");
-  $("previewPlaceholder").classList.remove("hidden");
+  return true;
 }
 
-/* IMAGE UPLOAD */
+$("bannerFile").addEventListener("change", event => {
+  const file = event.target.files?.[0];
 
-async function uploadBannerImage(dataUrl) {
+  if (!previewFile(
+    file,
+    "bannerPreview",
+    "previewPlaceholder",
+    value => bannerPreviewData = value
+  )) {
+    event.target.value = "";
+    bannerPreviewData = "";
+  }
+});
+
+$("serviceFile").addEventListener("change", event => {
+  const file = event.target.files?.[0];
+
+  if (!previewFile(
+    file,
+    "servicePreview",
+    "servicePreviewPlaceholder",
+    value => servicePreviewData = value
+  )) {
+    event.target.value = "";
+    servicePreviewData = "";
+  }
+});
+
+function resetPreview(imageId, placeholderId) {
+  $(imageId).src = "";
+  $(imageId).classList.add("hidden");
+  $(placeholderId).classList.remove("hidden");
+}
+
+async function uploadImage(dataUrl) {
   const result = await api("/api/admin/media", {
     method: "POST",
-    body: JSON.stringify({
-      imageData: dataUrl
-    })
+    body: JSON.stringify({ imageData: dataUrl })
   });
+
+  if (!result.imageUrl) {
+    throw new Error("ছবির ঠিকানা পাওয়া যায়নি।");
+  }
 
   return result.imageUrl;
 }
 
-/* BANNERS */
+// ============================================
+// BANNERS
+// ============================================
 
 async function loadBanners() {
   try {
     const data = await api("/api/admin/banners");
     bannersCache = data.banners || [];
     renderBanners();
-
   } catch (error) {
     $("bannerList").textContent = error.message;
   }
@@ -453,17 +429,14 @@ function renderBanners() {
     const image = document.createElement("img");
     image.alt = banner.title || "Banner";
     image.src = banner.imageUrl || "";
-    image.onerror = () => {
-      image.style.display = "none";
-    };
+    image.onerror = () => image.style.display = "none";
 
     const title = document.createElement("h4");
     title.textContent = banner.title || "নাম নেই";
 
-    const details = document.createElement("p");
-    details.textContent =
-      `${banner.position || banner.slot || ""} • ` +
-      (banner.enabled ? "সক্রিয়" : "বন্ধ");
+    const info = document.createElement("p");
+    info.textContent =
+      `${banner.position || banner.slot || ""} • ${banner.enabled ? "সক্রিয়" : "বন্ধ"}`;
 
     const actions = document.createElement("div");
     actions.className = "item-actions";
@@ -473,14 +446,14 @@ function renderBanners() {
     edit.textContent = "Edit";
     edit.addEventListener("click", () => editBanner(banner));
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.textContent = "Delete";
-    remove.className = "delete-button";
-    remove.addEventListener("click", () => deleteBanner(banner._id));
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "delete-button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => deleteBanner(banner._id));
 
-    actions.append(edit, remove);
-    item.append(image, title, details, actions);
+    actions.append(edit, del);
+    item.append(image, title, info, actions);
     list.appendChild(item);
   });
 }
@@ -493,7 +466,7 @@ function resetBannerForm() {
   $("bannerSaveButton").textContent = "ব্যানার সংরক্ষণ";
   $("bannerFile").required = true;
   bannerPreviewData = "";
-  resetImagePreview();
+  resetPreview("bannerPreview", "previewPlaceholder");
 }
 
 $("bannerReset").addEventListener("click", resetBannerForm);
@@ -503,10 +476,9 @@ function editBanner(banner) {
   $("bannerTitle").value = banner.title || "";
   $("bannerDescription").value = banner.description || "";
   $("bannerLink").value = banner.link || banner.linkUrl || "";
-  $("bannerPosition").value =
-    banner.position || banner.slot || "landing_top";
-
+  $("bannerPosition").value = banner.position || banner.slot || "landing_top";
   $("bannerEnabled").checked = banner.enabled !== false;
+
   $("bannerFormHeading").textContent = "ব্যানার সম্পাদনা করুন";
   $("bannerSaveButton").textContent = "পরিবর্তন সংরক্ষণ";
   $("bannerFile").required = false;
@@ -517,18 +489,19 @@ function editBanner(banner) {
     $("bannerPreview").src = banner.imageUrl;
     $("bannerPreview").classList.remove("hidden");
     $("previewPlaceholder").classList.add("hidden");
+  } else {
+    resetPreview("bannerPreview", "previewPlaceholder");
   }
 
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  openPanel("bannerPanel");
 }
 
 $("bannerForm").addEventListener("submit", async event => {
   event.preventDefault();
 
   const id = $("bannerId").value;
-  const file = $("bannerFile").files?.[0];
-
   const button = $("bannerSaveButton");
+
   button.disabled = true;
   button.textContent = "সংরক্ষণ হচ্ছে...";
 
@@ -536,15 +509,12 @@ $("bannerForm").addEventListener("submit", async event => {
     let imageUrl = "";
 
     if (bannerPreviewData) {
-      imageUrl = await uploadBannerImage(bannerPreviewData);
+      imageUrl = await uploadImage(bannerPreviewData);
     } else if (id) {
-      const existing = bannersCache.find(item => item._id === id);
-      imageUrl = existing?.imageUrl || "";
+      imageUrl = bannersCache.find(x => x._id === id)?.imageUrl || "";
     }
 
-    if (!imageUrl) {
-      throw new Error("ব্যানারের ছবি নির্বাচন করুন।");
-    }
+    if (!imageUrl) throw new Error("ব্যানারের ছবি নির্বাচন করুন।");
 
     const payload = {
       title: $("bannerTitle").value.trim(),
@@ -556,9 +526,7 @@ $("bannerForm").addEventListener("submit", async event => {
     };
 
     await api(
-      id
-        ? `/api/admin/banners/${encodeURIComponent(id)}`
-        : "/api/admin/banners",
+      id ? `/api/admin/banners/${encodeURIComponent(id)}` : "/api/admin/banners",
       {
         method: id ? "PUT" : "POST",
         body: JSON.stringify(payload)
@@ -567,12 +535,10 @@ $("bannerForm").addEventListener("submit", async event => {
 
     resetBannerForm();
     await loadBanners();
-
-    showMessage("bannerMessage", "ব্যানার সফলভাবে সংরক্ষণ হয়েছে।");
+    message("bannerMessage", "ব্যানার সফলভাবে সংরক্ষণ হয়েছে।");
     toast("ব্যানার সংরক্ষণ হয়েছে।");
-
   } catch (error) {
-    showMessage("bannerMessage", error.message);
+    message("bannerMessage", error.message);
   } finally {
     button.disabled = false;
     button.textContent = $("bannerId").value
@@ -588,23 +554,22 @@ async function deleteBanner(id) {
     await api(`/api/admin/banners/${encodeURIComponent(id)}`, {
       method: "DELETE"
     });
-
     await loadBanners();
     toast("ব্যানার মুছে ফেলা হয়েছে।");
-
   } catch (error) {
-    showMessage("bannerMessage", error.message);
+    message("bannerMessage", error.message);
   }
 }
 
-/* SERVICES */
+// ============================================
+// SERVICES WITH CUSTOM IMAGES + CATEGORIES
+// ============================================
 
 async function loadServices() {
   try {
     const data = await api("/api/admin/services");
     servicesCache = data.services || [];
     renderServices();
-
   } catch (error) {
     $("serviceList").textContent = error.message;
   }
@@ -623,14 +588,22 @@ function renderServices() {
     const item = document.createElement("article");
     item.className = "simple-item";
 
-    const title = document.createElement("h4");
-    title.textContent =
-      `${service.icon || "✦"} ${service.name || "সার্ভিস"}`;
+    if (service.imageUrl) {
+      const image = document.createElement("img");
+      image.src = service.imageUrl;
+      image.alt = service.name || "Service";
+      image.style.cssText =
+        "width:72px;height:72px;object-fit:cover;border-radius:16px;display:block;margin-bottom:10px";
+      image.onerror = () => image.style.display = "none";
+      item.appendChild(image);
+    }
 
-    const description = document.createElement("p");
-    description.textContent =
-      `${service.description || ""} • ` +
-      (service.enabled === false ? "বন্ধ" : "সক্রিয়");
+    const title = document.createElement("h4");
+    title.textContent = service.name || "সার্ভিস";
+
+    const details = document.createElement("p");
+    details.textContent =
+      `${service.categoryName || service.category || "অন্যান্য"} • ${service.enabled === false ? "বন্ধ" : "সক্রিয়"}`;
 
     const actions = document.createElement("div");
     actions.className = "item-actions";
@@ -640,14 +613,14 @@ function renderServices() {
     edit.textContent = "Edit";
     edit.addEventListener("click", () => editService(service));
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "delete-button";
-    remove.textContent = "Delete";
-    remove.addEventListener("click", () => deleteService(service._id));
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "delete-button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => deleteService(service._id));
 
-    actions.append(edit, remove);
-    item.append(title, description, actions);
+    actions.append(edit, del);
+    item.append(title, details, actions);
     list.appendChild(item);
   });
 }
@@ -656,7 +629,12 @@ function resetServiceForm() {
   $("serviceForm").reset();
   $("serviceId").value = "";
   $("serviceEnabled").checked = true;
+  $("serviceIcon").value = "✦";
   $("serviceFormHeading").textContent = "নতুন সার্ভিস যোগ করুন";
+  $("serviceSaveButton").textContent = "সার্ভিস সংরক্ষণ";
+  $("serviceFile").value = "";
+  servicePreviewData = "";
+  resetPreview("servicePreview", "servicePreviewPlaceholder");
 }
 
 $("serviceReset").addEventListener("click", resetServiceForm);
@@ -665,30 +643,56 @@ function editService(service) {
   $("serviceId").value = service._id || "";
   $("serviceName").value = service.name || "";
   $("serviceDescription").value = service.description || "";
+  $("serviceCategory").value =
+    service.categoryName || service.category || "";
   $("serviceIcon").value = service.icon || "✦";
   $("serviceEnabled").checked = service.enabled !== false;
   $("serviceFormHeading").textContent = "সার্ভিস সম্পাদনা করুন";
+  $("serviceSaveButton").textContent = "পরিবর্তন সংরক্ষণ";
 
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("serviceFile").value = "";
+  servicePreviewData = "";
+
+  if (service.imageUrl) {
+    $("servicePreview").src = service.imageUrl;
+    $("servicePreview").classList.remove("hidden");
+    $("servicePreviewPlaceholder").classList.add("hidden");
+  } else {
+    resetPreview("servicePreview", "servicePreviewPlaceholder");
+  }
+
+  openPanel("servicePanel");
 }
 
 $("serviceForm").addEventListener("submit", async event => {
   event.preventDefault();
 
   const id = $("serviceId").value;
+  const button = $("serviceSaveButton");
 
-  const payload = {
-    name: $("serviceName").value.trim(),
-    description: $("serviceDescription").value.trim(),
-    icon: $("serviceIcon").value.trim() || "✦",
-    enabled: $("serviceEnabled").checked
-  };
+  button.disabled = true;
+  button.textContent = "সংরক্ষণ হচ্ছে...";
 
   try {
+    let imageUrl = "";
+
+    if (servicePreviewData) {
+      imageUrl = await uploadImage(servicePreviewData);
+    } else if (id) {
+      imageUrl = servicesCache.find(x => x._id === id)?.imageUrl || "";
+    }
+
+    const payload = {
+      name: $("serviceName").value.trim(),
+      description: $("serviceDescription").value.trim(),
+      categoryName: $("serviceCategory").value.trim() || "অন্যান্য",
+      icon: $("serviceIcon").value.trim() || "✦",
+      imageUrl,
+      enabled: $("serviceEnabled").checked
+    };
+
     await api(
-      id
-        ? `/api/admin/services/${encodeURIComponent(id)}`
-        : "/api/admin/services",
+      id ? `/api/admin/services/${encodeURIComponent(id)}` : "/api/admin/services",
       {
         method: id ? "PUT" : "POST",
         body: JSON.stringify(payload)
@@ -697,12 +701,15 @@ $("serviceForm").addEventListener("submit", async event => {
 
     resetServiceForm();
     await loadServices();
-
-    showMessage("serviceMessage", "সার্ভিস সংরক্ষণ হয়েছে।");
+    message("serviceMessage", "সার্ভিস সফলভাবে সংরক্ষণ হয়েছে।");
     toast("সার্ভিস আপডেট হয়েছে।");
-
   } catch (error) {
-    showMessage("serviceMessage", error.message);
+    message("serviceMessage", error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = $("serviceId").value
+      ? "পরিবর্তন সংরক্ষণ"
+      : "সার্ভিস সংরক্ষণ";
   }
 });
 
@@ -713,16 +720,16 @@ async function deleteService(id) {
     await api(`/api/admin/services/${encodeURIComponent(id)}`, {
       method: "DELETE"
     });
-
     await loadServices();
     toast("সার্ভিস মুছে ফেলা হয়েছে।");
-
   } catch (error) {
-    showMessage("serviceMessage", error.message);
+    message("serviceMessage", error.message);
   }
 }
 
-/* WEBSITE TEXT */
+// ============================================
+// WEBSITE TEXT
+// ============================================
 
 async function loadContent() {
   try {
@@ -734,9 +741,8 @@ async function loadContent() {
 
     $("heroSubtitleInput").value =
       content.heroSubtitle || content.landing?.subtitle || "";
-
   } catch (error) {
-    showMessage("contentMessage", error.message);
+    message("contentMessage", error.message);
   }
 }
 
@@ -752,14 +758,15 @@ $("contentForm").addEventListener("submit", async event => {
       })
     });
 
-    showMessage("contentMessage", "ওয়েবসাইটের লেখা সংরক্ষণ হয়েছে।");
+    message("contentMessage", "ওয়েবসাইটের লেখা সংরক্ষণ হয়েছে।");
     toast("কনটেন্ট আপডেট হয়েছে।");
-
   } catch (error) {
-    showMessage("contentMessage", error.message);
+    message("contentMessage", error.message);
   }
 });
 
-/* START */
+// ============================================
+// START
+// ============================================
 
 document.addEventListener("DOMContentLoaded", checkAdmin);
