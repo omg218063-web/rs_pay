@@ -4,59 +4,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#130c25">
-  <title>RS PAY - Digital Services</title>
+  <meta name="theme-color" content="#21133e">
+  <title>RS PAY | Digital Services</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css?v=3">
 </head>
 <body>
+<div class="site-shell">
 
-<div class="app-shell">
-
+  <!-- HEADER -->
   <header class="topbar">
-    <a href="#" class="brand" id="brandHome">
+    <a class="brand" href="#" id="brandHome">
       <span class="brand-logo">RS</span>
       <span>RS <b>PAY</b></span>
     </a>
-
+    <nav class="landing-nav" id="landingNav">
+      <a href="#landingServices">সার্ভিস</a>
+      <a href="#landingAbout">আমাদের সম্পর্কে</a>
+    </nav>
     <div class="top-actions">
-      <button id="landingLogin" class="header-login">Login</button>
-      <button id="landingRegister" class="header-register">Get Started</button>
-      <button id="headerAccount" class="header-account hidden">My Account</button>
+      <button id="landingLogin" class="btn btn-outline">Login</button>
+      <button id="landingRegister" class="btn btn-gold">Get Started</button>
+      <button id="headerAccount" class="btn btn-gold hidden">My Account</button>
     </div>
   </header>
 
   <main>
-
     <!-- PUBLIC LANDING PAGE -->
     <section id="landingView">
-
       <section class="landing-hero">
         <div class="hero-content">
-          <span class="hero-tag">YOUR DIGITAL SERVICE PARTNER</span>
-
-          <h1>
-            আপনার প্রতিদিনের<br>
-            ডিজিটাল সেবা এখন<br>
-            <span>এক ঠিকানায়।</span>
-          </h1>
-
-          <p>
-            মোবাইল রিচার্জ, গেম রিচার্জ এবং প্রয়োজনীয়
-            ডিজিটাল সার্ভিস খুঁজে নিন সহজেই।
-          </p>
-
+          <span class="hero-tag">✦ YOUR DIGITAL SERVICE PARTNER</span>
+          <h1>আপনার প্রতিদিনের<br>ডিজিটাল সেবা এখন<br><span>এক ঠিকানায়।</span></h1>
+          <p>মোবাইল রিচার্জ, গেম রিচার্জ এবং প্রয়োজনীয় ডিজিটাল সার্ভিস খুঁজে নিন সহজেই।</p>
           <div class="hero-buttons">
-            <button id="heroGetStarted" class="btn-gold">
-              Get Started <span>→</span>
-            </button>
-            <button id="heroLogin" class="btn-outline">
-              Login
-            </button>
+            <button id="heroGetStarted" class="btn btn-gold">Get Started <span>→</span></button>
+            <button id="heroLogin" class="btn btn-glass">Login</button>
           </div>
-
           <div class="hero-points">
             <span>✦ সহজ ব্যবহার</span>
             <span>✦ এক জায়গায় সার্ভিস</span>
@@ -64,81 +50,76 @@
           </div>
         </div>
 
-        <div class="hero-art">
-          <div class="hero-glow"></div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
           <div class="hero-phone">
-            <div class="phone-top"></div>
-            <div class="phone-brand">RS <b>PAY</b></div>
-            <div class="phone-label">YOUR ACCOUNT</div>
+            <div class="phone-notch"></div>
+            <div class="phone-brand"><span>RS</span> PAY</div>
+            <div class="phone-greeting">YOUR ACCOUNT</div>
+            <div class="phone-balance-label">Available Balance</div>
             <div class="phone-balance">৳ ০.০০</div>
-            <div class="phone-small">Available Balance · Demo</div>
+            <div class="phone-demo">DEMO PREVIEW</div>
             <div class="phone-shortcuts">
-              <span>📱</span>
-              <span>🎮</span>
-              <span>✦</span>
+              <span>📱</span><span>🎮</span><span>✦</span>
             </div>
-            <div class="phone-lines"></div>
+            <div class="phone-lines"><i></i><i></i><i></i></div>
           </div>
           <div class="floating-chip chip-one">⚡ Fast Access</div>
-          <div class="floating-chip chip-two">RS PAY</div>
+          <div class="floating-chip chip-two">✦ RS PAY</div>
         </div>
       </section>
 
-      <section class="landing-services section-wrap">
+      <section id="landingServices" class="section-wrap">
         <div class="section-heading">
           <span class="eyebrow">OUR SERVICES</span>
           <h2>আপনার প্রয়োজনীয় সার্ভিস</h2>
           <p>একটি প্ল্যাটফর্মে বিভিন্ন ডিজিটাল সার্ভিস।</p>
         </div>
-
         <div class="landing-service-grid">
           <article class="landing-service">
-            <span>📱</span>
+            <span class="landing-service-icon">📱</span>
             <h3>মোবাইল রিচার্জ</h3>
             <p>মোবাইল রিচার্জ সার্ভিসের তথ্য।</p>
           </article>
           <article class="landing-service">
-            <span>🎮</span>
+            <span class="landing-service-icon">🎮</span>
             <h3>গেম রিচার্জ</h3>
             <p>গেমিং সার্ভিসের তথ্য।</p>
           </article>
           <article class="landing-service">
-            <span>🌐</span>
+            <span class="landing-service-icon">🌐</span>
             <h3>ডিজিটাল সার্ভিস</h3>
             <p>অন্যান্য ডিজিটাল সার্ভিস।</p>
           </article>
           <article class="landing-service">
-            <span>✦</span>
+            <span class="landing-service-icon">✦</span>
             <h3>বিশেষ অফার</h3>
             <p>নতুন অফার ও আপডেট।</p>
           </article>
         </div>
       </section>
 
-      <section class="landing-about section-wrap">
+      <section id="landingAbout" class="landing-about section-wrap">
         <div>
           <span class="eyebrow">ABOUT RS PAY</span>
           <h2>ডিজিটাল সেবার সহজ অভিজ্ঞতা</h2>
-          <p>
-            RS PAY একটি ডিজিটাল সার্ভিস প্ল্যাটফর্ম।
-            প্রয়োজনীয় সার্ভিস, ক্যাটাগরি ও অফার
-            সুন্দরভাবে এক জায়গায় সাজানো থাকবে।
-          </p>
+          <p>RS PAY একটি ডিজিটাল সার্ভিস প্ল্যাটফর্ম। প্রয়োজনীয় সার্ভিস, ক্যাটাগরি ও অফার সুন্দরভাবে এক জায়গায় সাজানো থাকবে।</p>
         </div>
         <div class="about-symbol">RS<span>PAY</span></div>
       </section>
 
       <section class="landing-cta">
+        <span class="eyebrow">START WITH RS PAY</span>
         <h2>আজই শুরু করুন RS PAY</h2>
         <p>আপনার অ্যাকাউন্ট তৈরি করে সার্ভিসগুলো দেখুন।</p>
-        <button id="bottomGetStarted" class="btn-gold">Create Account →</button>
+        <button id="bottomGetStarted" class="btn btn-gold">Create Account →</button>
       </section>
-
     </section>
 
     <!-- LOGIN / REGISTER -->
     <section id="authView" class="auth-view hidden">
-      <div class="auth-side">
+      <div class="auth-showcase">
         <span class="eyebrow">WELCOME TO RS PAY</span>
         <h1>আপনার ডিজিটাল<br><span>সার্ভিসের ঠিকানা</span></h1>
         <p>একটি অ্যাকাউন্ট থেকেই প্রয়োজনীয় সার্ভিসগুলো দেখুন।</p>
@@ -146,46 +127,36 @@
       </div>
 
       <div class="auth-card">
-        <button id="backToLanding" class="back-link">← ফিরে যান</button>
-
+        <button id="backToLanding" class="back-link" type="button">← ফিরে যান</button>
         <div class="auth-tabs">
-          <button id="loginTab" class="auth-tab active">Login</button>
-          <button id="registerTab" class="auth-tab">Register</button>
+          <button id="loginTab" class="auth-tab active" type="button">Login</button>
+          <button id="registerTab" class="auth-tab" type="button">Register</button>
         </div>
-
         <h2 id="authTitle">অ্যাকাউন্টে লগইন করুন</h2>
         <p id="authIntro">আপনার মোবাইল নম্বর ও পাসওয়ার্ড দিন।</p>
 
         <form id="authForm">
-          <label id="nameField" class="hidden">
+          <label id="nameField" class="form-label hidden">
             আপনার নাম
-            <input id="nameInput" type="text" maxlength="60" placeholder="আপনার নাম">
+            <input id="nameInput" name="name" type="text" maxlength="60" placeholder="আপনার নাম">
           </label>
-
-          <label>
+          <label class="form-label">
             মোবাইল নম্বর
-            <input id="phoneInput" type="tel" maxlength="16" placeholder="01XXXXXXXXX" required>
+            <input id="phoneInput" name="phone" type="tel" maxlength="16" placeholder="01XXXXXXXXX" required>
           </label>
-
-          <label>
+          <label class="form-label">
             পাসওয়ার্ড
-            <input id="passwordInput" type="password" minlength="10" placeholder="পাসওয়ার্ড" required>
+            <input id="passwordInput" name="password" type="password" minlength="10" maxlength="72" placeholder="পাসওয়ার্ড" required>
           </label>
-
-          <p id="authMessage" class="message"></p>
-
-          <button id="authSubmit" type="submit" class="btn-gold full-width">
-            Login
-          </button>
+          <p id="authMessage" class="form-message" role="status"></p>
+          <button id="authSubmit" type="submit" class="btn btn-gold btn-full">Login</button>
         </form>
-
         <p class="auth-footnote">আপনার পাসওয়ার্ড নিরাপদে রাখুন।</p>
       </div>
     </section>
 
     <!-- LOGGED IN APPLICATION -->
     <section id="appView" class="hidden">
-
       <div class="app-welcome">
         <div>
           <span class="eyebrow">WELCOME BACK</span>
@@ -195,91 +166,66 @@
         <div class="welcome-logo">RS</div>
       </div>
 
-      <!-- BALANCE AND ACCOUNT SHORTCUTS -->
-      <section class="wallet-overview">
-        <div class="wallet-main">
-          <span class="eyebrow">AVAILABLE BALANCE</span>
-          <h2 id="homeBalance">৳ ০.০০</h2>
-          <span class="demo-label">DEMO BALANCE · API NOT CONNECTED</span>
-        </div>
+      <!-- HOME PANEL -->
+      <section id="homePanel">
+        <section class="wallet-overview">
+          <div class="wallet-main">
+            <span class="eyebrow">AVAILABLE BALANCE</span>
+            <h2 id="homeBalance">৳ ০.০০</h2>
+            <span class="demo-label">DEMO DISPLAY · NO TRANSACTIONS</span>
+          </div>
+          <div class="wallet-actions">
+            <button type="button" data-popup="balance"><span>৳</span><small>Balance</small></button>
+            <button type="button" data-popup="deposit"><span>＋</span><small>Deposit History</small></button>
+            <button type="button" data-popup="recharge"><span>↗</span><small>Recharge History</small></button>
+            <button type="button" data-tab="account"><span>◉</span><small>My Account</small></button>
+          </div>
+        </section>
 
-        <div class="wallet-actions">
-          <button data-popup="balancePopup">
-            <span>৳</span>
-            <small>Balance</small>
-          </button>
-          <button data-popup="depositPopup">
-            <span>＋</span>
-            <small>Deposit History</small>
-          </button>
-          <button data-popup="rechargePopup">
-            <span>↗</span>
-            <small>Recharge History</small>
-          </button>
-          <button data-tab="account">
-            <span>◉</span>
-            <small>My Account</small>
-          </button>
-        </div>
+        <section class="offer-section">
+          <div class="section-heading section-heading-row">
+            <div><span class="eyebrow">OFFERS & PROMOTIONS</span><h2>নতুন অফার ও বিজ্ঞাপন</h2></div>
+          </div>
+          <div id="homeBanners" class="offer-grid">
+            <div class="offer-placeholder">
+              <span>RS PAY OFFERS</span>
+              <h3>আপনার অফার এখানে দেখানো হবে</h3>
+              <p>অ্যাডমিন থেকে ব্যানার যুক্ত হলে এখানে দেখা যাবে।</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="home-service-section">
+          <div class="section-heading section-heading-row">
+            <div><span class="eyebrow">EXPLORE SERVICES</span><h2>সার্ভিসসমূহ</h2><p>আপনার প্রয়োজনীয় সার্ভিস বেছে নিন।</p></div>
+            <button class="see-all" type="button" data-tab="categories">সব দেখুন →</button>
+          </div>
+          <div id="homeServiceGrid" class="mobile-app-grid">
+            <div class="loading-card">সার্ভিস লোড হচ্ছে...</div>
+          </div>
+        </section>
+
+        <section class="dashboard-about">
+          <span class="eyebrow">ABOUT RS PAY</span>
+          <h2>সব ডিজিটাল সার্ভিস এক জায়গায়</h2>
+          <p>RS PAY-তে উপলভ্য সার্ভিস ও অফারের তথ্য সহজভাবে খুঁজে নিতে পারবেন।</p>
+        </section>
       </section>
 
-      <!-- ADVERTISEMENT / OFFER BANNERS -->
-      <section class="offer-section">
-        <div class="section-heading compact">
-          <div>
-            <span class="eyebrow">OFFERS & PROMOTIONS</span>
-            <h2>নতুন অফার ও বিজ্ঞাপন</h2>
-          </div>
+      <!-- CATEGORIES PANEL -->
+      <section id="categoriesPanel" class="content-panel hidden">
+        <div class="page-title">
+          <span class="eyebrow">SERVICE DIRECTORY</span>
+          <h1>সব সার্ভিস</h1>
+          <p>আপনার প্রয়োজনীয় ক্যাটাগরি থেকে সার্ভিস বেছে নিন।</p>
         </div>
-
-        <div id="homeBanners" class="offer-grid">
-          <div class="offer-placeholder">
-            <span>RS PAY OFFERS</span>
-            <h3>আপনার অফার এখানে দেখানো হবে</h3>
-            <p>অ্যাডমিন থেকে ব্যানার যুক্ত হলে এখানে দেখা যাবে।</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- HOME SERVICES -->
-      <section class="home-service-section">
-        <div class="section-heading">
-          <div>
-            <span class="eyebrow">EXPLORE SERVICES</span>
-            <h2>সার্ভিসসমূহ</h2>
-            <p>আপনার প্রয়োজনীয় সার্ভিস বেছে নিন।</p>
-          </div>
-          <button class="see-all" data-tab="categories">সব দেখুন →</button>
-        </div>
-
-        <div id="homeServiceGrid" class="mobile-app-grid">
+        <div id="categoryFilters" class="category-filters"></div>
+        <div id="allCategories" class="mobile-app-grid">
           <div class="loading-card">সার্ভিস লোড হচ্ছে...</div>
         </div>
       </section>
 
-      <!-- ABOUT -->
-      <section class="dashboard-about">
-        <span class="eyebrow">ABOUT RS PAY</span>
-        <h2>সব ডিজিটাল সার্ভিস এক জায়গায়</h2>
-        <p>
-          RS PAY-তে উপলভ্য সার্ভিস ও অফারের তথ্য
-          সহজভাবে খুঁজে নিতে পারবেন।
-        </p>
-      </section>
-
-      <!-- CATEGORIES -->
-      <section id="categoriesPanel" class="content-panel hidden">
-        <div class="page-title">
-          <span class="eyebrow">SERVICE DIRECTORY</span>
-          <h1>সব ক্যাটাগরি</h1>
-          <p>প্রতিটি ক্যাটাগরির সার্ভিস চারটি করে সাজানো থাকবে।</p>
-        </div>
-        <div id="allCategories" class="category-list">
-          <div class="loading-card">ক্যাটাগরি লোড হচ্ছে...</div>
-        </div>
-      </section>
-
-      <!-- MY ACCOUNT -->
+      <!-- ACCOUNT PANEL -->
       <section id="accountPanel" class="content-panel hidden">
         <div class="page-title">
           <span class="eyebrow">PERSONAL ACCOUNT</span>
@@ -297,100 +243,67 @@
             </div>
           </div>
 
-          <button id="editAccountBtn" class="edit-account-btn">
-            ✎ Edit Account
-          </button>
+          <button id="editAccountBtn" class="btn btn-outline" type="button">✎ Edit Account</button>
 
           <div id="accountEditForm" class="account-edit-form hidden">
             <form id="profileForm">
-              <label>
+              <label class="form-label">
                 নাম
-                <input id="profileName" type="text" maxlength="60" required>
+                <input id="profileName" name="name" type="text" maxlength="60" required>
               </label>
-
-              <label>
+              <label class="form-label">
                 মোবাইল নম্বর
-                <input id="profilePhone" type="tel" maxlength="16">
+                <input id="profilePhone" type="tel" readonly>
+                <small class="field-hint">মোবাইল নম্বর পরিবর্তন এখনো চালু হয়নি।</small>
               </label>
-
-              <label>
-                প্রোফাইল ছবি
+              <label class="form-label">
+                প্রোফাইল ছবি (শুধু প্রিভিউ)
                 <input id="profilePhoto" type="file" accept="image/png,image/jpeg,image/webp">
               </label>
-
-              <p id="profileMessage" class="message"></p>
-
+              <p id="profileMessage" class="form-message" role="status"></p>
               <div class="edit-buttons">
-                <button id="cancelEditBtn" type="button" class="btn-secondary">Cancel</button>
-                <button type="submit" class="btn-gold">Save Changes</button>
+                <button id="cancelEditBtn" type="button" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-gold">Save Changes</button>
               </div>
             </form>
           </div>
         </article>
 
         <div class="account-menu">
-          <button data-popup="balancePopup">
-            <span>৳</span>
-            <div><b>ব্যালেন্স</b><small>অ্যাকাউন্ট ব্যালেন্স দেখুন</small></div>
-            <strong>›</strong>
-          </button>
-
-          <button data-popup="depositPopup">
-            <span>＋</span>
-            <div><b>ডিপোজিট হিস্টরি</b><small>ডিপোজিটের রেকর্ড</small></div>
-            <strong>›</strong>
-          </button>
-
-          <button data-popup="rechargePopup">
-            <span>↗</span>
-            <div><b>রিচার্জ হিস্টরি</b><small>সার্ভিসের রেকর্ড</small></div>
-            <strong>›</strong>
-          </button>
-
-          <button data-popup="settingsPopup">
-            <span>⚙</span>
-            <div><b>অ্যাপ সেটিংস</b><small>অ্যাকসেন্ট কালার পরিবর্তন</small></div>
-            <strong>›</strong>
-          </button>
+          <button type="button" data-popup="balance"><span>৳</span><div><b>ব্যালেন্স</b><small>অ্যাকাউন্ট ব্যালেন্স দেখুন</small></div><strong>›</strong></button>
+          <button type="button" data-popup="deposit"><span>＋</span><div><b>ডিপোজিট হিস্টরি</b><small>ডিপোজিটের রেকর্ড</small></div><strong>›</strong></button>
+          <button type="button" data-popup="recharge"><span>↗</span><div><b>রিচার্জ হিস্টরি</b><small>রিচার্জের রেকর্ড</small></div><strong>›</strong></button>
+          <button type="button" data-popup="settings"><span>⚙</span><div><b>অ্যাকাউন্ট সেটিংস</b><small>সেটিংসের তথ্য</small></div><strong>›</strong></button>
         </div>
 
-        <a href="admin.html" class="admin-quiet-link">Admin Panel</a>
-
-        <button id="logoutBtn" class="logout-btn">Log Out</button>
+        <a href="/admin.html" class="admin-quiet-link">Admin Panel</a>
+        <button id="logoutBtn" class="logout-btn" type="button">Log Out</button>
       </section>
 
-      <!-- BOTTOM NAVIGATION -->
+      <!-- BOTTOM NAV -->
       <nav class="bottom-nav">
-        <button class="nav-item active" data-tab="home">
-          <span>⌂</span><small>Home</small>
-        </button>
-        <button class="nav-item" data-tab="categories">
-          <span>▦</span><small>Categories</small>
-        </button>
-        <button class="nav-item" data-tab="account">
-          <span>◉</span><small>My Account</small>
-        </button>
+        <button class="nav-item active" type="button" data-tab="home"><span>⌂</span><small>Home</small></button>
+        <button class="nav-item" type="button" data-tab="categories"><span>▦</span><small>Categories</small></button>
+        <button class="nav-item" type="button" data-tab="account"><span>◉</span><small>My Account</small></button>
       </nav>
-
     </section>
-
   </main>
 
   <footer class="site-footer">
-    <div class="brand"><span class="brand-logo">RS</span> RS <b>PAY</b></div>
+    <div class="brand"><span class="brand-logo">RS</span><span>RS <b>PAY</b></span></div>
     <small>© <span id="year"></span> RS PAY. All rights reserved.</small>
   </footer>
-
 </div>
 
-<!-- POPUP OVERLAY -->
+<!-- POPUP -->
 <div id="popupOverlay" class="popup-overlay hidden">
-  <section class="popup-card">
-    <button id="closePopup" class="popup-close" aria-label="Close">×</button>
+  <section class="popup-card" role="dialog" aria-modal="true">
+    <button id="closePopup" class="popup-close" type="button" aria-label="Close">×</button>
     <div id="popupContent"></div>
   </section>
 </div>
 
-<script src="/app.js"></script>
+<div id="appToast" class="app-toast hidden" role="status"></div>
+<script src="/app.js?v=3" defer></script>
 </body>
 </html>
