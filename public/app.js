@@ -1,8 +1,9 @@
+
 "use strict";
 
 /* =========================================
-   RS PAY - FRONTEND APP
-   Existing API compatible version
+   RS PAY - MAIN FRONTEND
+   Compatible with current RS PAY server.js
 ========================================= */
 
 const API = {
@@ -18,7 +19,8 @@ const API = {
 let currentUser = null;
 let allServices = [];
 let authMode = "login";
-let selectedPhoto = "";
+let selectedCategory = "সব";
+let photoPreviewUrl = "";
 
 /* =========================================
    HELPERS
@@ -39,13 +41,12 @@ function escapeHTML(value) {
 }
 
 function safeImageUrl(value) {
+  if (!value) return "";
+
   try {
     const url = new URL(String(value), location.origin);
 
-    if (
-      url.protocol === "https:" ||
-      url.protocol === "http:"
-    ) {
+    if (url.protocol === "https:" || url.protocol === "http:") {
       return url.href;
     }
 
@@ -56,13 +57,8 @@ function safeImageUrl(value) {
 }
 
 function showToast(message) {
-  let toast = $("#appToast");
-
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "appToast";
-    document.body.appendChild(toast);
-  }
+  const toast = $("#appToast");
+  if (!toast) return;
 
   toast.textContent = message;
   toast.classList.remove("hidden");
@@ -77,11 +73,11 @@ function showToast(message) {
 async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
     credentials: "same-origin",
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
-    },
-    ...options
+    }
   });
 
   let data = {};
@@ -93,9 +89,7 @@ async function apiRequest(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
-      data.message || "অনুরোধ সম্পন্ন হয়নি।"
-    );
+    throw new Error(data.message || "অনুরোধ সম্পন্ন হয়নি।");
   }
 
   return data;
@@ -112,23 +106,47 @@ function hideElement(selector) {
 }
 
 /* =========================================
-   PAGE VIEW CONTROL
+   HEADER STATE
+========================================= */
+
+function updateHeader() {
+  const loggedIn = Boolean(currentUser);
+
+  if (loggedIn) {
+    hideElement("#landingLogin");
+    hideElement("#landingRegister");
+    showElement("#headerAccount");
+    hideElement("#landingNav");
+  } else {
+    showElement("#landingLogin");
+    showElement("#landingRegister");
+    hideElement("#headerAccount");
+    showElement("#landingNav");
+  }
+}
+
+/* =========================================
+   PAGE VIEW
 ========================================= */
 
 function showLanding() {
   showElement("#landingView");
   hideElement("#authView");
   hideElement("#appView");
+
+  updateHeader();
+  window.scrollTo(0, 0);
 }
 
 function showAuth(mode = "login") {
-  authMode = mode;
-
   hideElement("#landingView");
   showElement("#authView");
   hideElement("#appView");
 
-  updateAuthTabs();
+  setAuthMode(mode);
+  updateHeader();
+
+  window.scrollTo(0, 0);
 }
 
 function showApp() {
@@ -136,72 +154,64 @@ function showApp() {
   hideElement("#authView");
   showElement("#appView");
 
+  updateHeader();
   openTab("home");
+
+  window.scrollTo(0, 0);
 }
 
 /* =========================================
-   AUTH TABS
+   AUTH MODE
 ========================================= */
-
-function updateAuthTabs() {
-  const loginTab = $("#loginTab");
-  const registerTab = $("#registerTab");
-
-  if (loginTab) {
-    loginTab.classList.toggle(
-      "active",
-      authMode === "login"
-    );
-  }
-
-  if (registerTab) {
-    registerTab.classList.toggle(
-      "active",
-      authMode === "register"
-    );
-  }
-
-  const nameField = $(
-    '#authForm input[name="name"]'
-  );
-
-  const submitButton = $(
-    '#authForm button[type="submit"]'
-  );
-
-  if (nameField) {
-    nameField.closest(".form-group")?.classList.toggle(
-      "hidden",
-      authMode === "login"
-    );
-
-    nameField.required = authMode === "register";
-  }
-
-  if (submitButton) {
-    submitButton.textContent =
-      authMode === "login"
-        ? "লগইন করুন"
-        : "অ্যাকাউন্ট তৈরি করুন";
-  }
-}
 
 function setAuthMode(mode) {
   authMode = mode === "register" ? "register" : "login";
-  updateAuthTabs();
 
-  const heading = $("#authView h2");
+  const loginTab = $("#loginTab");
+  const registerTab = $("#registerTab");
+  const nameField = $("#nameField");
+  const nameInput = $("#nameInput");
+  const title = $("#authTitle");
+  const intro = $("#authIntro");
+  const submit = $("#authSubmit");
+  const message = $("#authMessage");
 
-  if (heading) {
-    heading.textContent =
-      authMode === "login"
-        ? "আপনার অ্যাকাউন্টে লগইন করুন"
-        : "নতুন অ্যাকাউন্ট তৈরি করুন";
+  loginTab?.classList.toggle("active", authMode === "login");
+  registerTab?.classList.toggle("active", authMode === "register");
+
+  if (nameField) {
+    nameField.classList.toggle("hidden", authMode !== "register");
+  }
+
+  if (nameInput) {
+    nameInput.required = authMode === "register";
+  }
+
+  if (title) {
+    title.textContent = authMode === "login"
+      ? "অ্যাকাউন্টে লগইন করুন"
+      : "নতুন অ্যাকাউন্ট তৈরি করুন";
+  }
+
+  if (intro) {
+    intro.textContent = authMode === "login"
+      ? "আপনার মোবাইল নম্বর ও পাসওয়ার্ড দিন।"
+      : "আপনার নাম, মোবাইল নম্বর ও পাসওয়ার্ড দিন।";
+  }
+
+  if (submit) {
+    submit.textContent = authMode === "login"
+      ? "Login"
+      : "Create Account";
+  }
+
+  if (message) {
+    message.textContent = "";
   }
 }
 
 /* =========================================
-   LOGIN / REGISTER
+   LOGIN / REGISTRATION
 ========================================= */
 
 async function handleAuthSubmit(event) {
@@ -209,42 +219,37 @@ async function handleAuthSubmit(event) {
 
   const form = event.currentTarget;
 
-  const name = form.querySelector(
-    '[name="name"]'
-  )?.value.trim() || "";
+  const name = $("#nameInput")?.value.trim() || "";
+  const phone = $("#phoneInput")?.value.trim() || "";
+  const password = $("#passwordInput")?.value || "";
 
-  const phone = form.querySelector(
-    '[name="phone"]'
-  )?.value.trim() || "";
-
-  const password = form.querySelector(
-    '[name="password"]'
-  )?.value || "";
+  const message = $("#authMessage");
+  const submit = $("#authSubmit");
 
   if (!phone || !password) {
-    showToast("মোবাইল নম্বর ও পাসওয়ার্ড দিন।");
+    if (message) message.textContent = "মোবাইল নম্বর ও পাসওয়ার্ড দিন।";
     return;
   }
 
   if (authMode === "register" && name.length < 2) {
-    showToast("আপনার নাম লিখুন।");
+    if (message) message.textContent = "আপনার সঠিক নাম লিখুন।";
     return;
   }
 
-  const submitButton = form.querySelector(
-    'button[type="submit"]'
-  );
-
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.textContent = "অপেক্ষা করুন...";
+  if (authMode === "register" && password.length < 10) {
+    if (message) message.textContent = "পাসওয়ার্ড কমপক্ষে ১০ অক্ষরের হতে হবে।";
+    return;
   }
 
+  submit.disabled = true;
+  submit.textContent = "অপেক্ষা করুন...";
+
+  if (message) message.textContent = "";
+
   try {
-    const endpoint =
-      authMode === "login"
-        ? API.login
-        : API.register;
+    const endpoint = authMode === "login"
+      ? API.login
+      : API.register;
 
     const payload = {
       phone,
@@ -267,8 +272,7 @@ async function handleAuthSubmit(event) {
     }
 
     form.reset();
-
-    updateUserUI();
+    updateAccountUI();
     showApp();
 
     showToast(
@@ -278,81 +282,58 @@ async function handleAuthSubmit(event) {
     );
 
   } catch (error) {
-    showToast(error.message);
-  } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.textContent =
-        authMode === "login"
-          ? "লগইন করুন"
-          : "অ্যাকাউন্ট তৈরি করুন";
+    if (message) {
+      message.textContent = error.message;
+    } else {
+      showToast(error.message);
     }
+  } finally {
+    submit.disabled = false;
+    submit.textContent = authMode === "login"
+      ? "Login"
+      : "Create Account";
   }
 }
 
 /* =========================================
-   USER PROFILE DISPLAY
+   ACCOUNT DISPLAY
 ========================================= */
 
-function updateUserUI() {
+function updateAccountUI() {
   if (!currentUser) return;
 
-  const name = currentUser.name || "ব্যবহারকারী";
+  const name = currentUser.name || "User";
   const phone = currentUser.phone || "";
 
-  const nameTargets = [
-    "#welcomeName",
-    "#accountName",
-    "#profileNameText",
-    "#headerUserName"
-  ];
+  const welcomeName = $("#welcomeName");
+  const accountName = $("#accountName");
+  const accountPhone = $("#accountPhone");
+  const profileName = $("#profileName");
+  const profilePhone = $("#profilePhone");
+  const avatar = $("#accountAvatar");
 
-  nameTargets.forEach(selector => {
-    const element = $(selector);
-    if (element) element.textContent = name;
-  });
+  if (welcomeName) welcomeName.textContent = name;
+  if (accountName) accountName.textContent = name;
+  if (accountPhone) accountPhone.textContent = phone;
 
-  const phoneTargets = [
-    "#accountPhone",
-    "#profilePhoneText"
-  ];
+  if (profileName) profileName.value = name;
+  if (profilePhone) profilePhone.value = phone;
 
-  phoneTargets.forEach(selector => {
-    const element = $(selector);
-    if (element) element.textContent = phone;
-  });
-
-  const nameInput = $("#profileName");
-  if (nameInput) nameInput.value = name;
-
-  const phoneInput = $("#profilePhone");
-
-  if (phoneInput) {
-    phoneInput.value = phone;
-
-    // বর্তমান সার্ভার API মোবাইল নম্বর পরিবর্তন করে না।
-    phoneInput.readOnly = true;
-    phoneInput.title =
-      "মোবাইল নম্বর পরিবর্তনের সুবিধা এখনো সার্ভারে যুক্ত হয়নি।";
-  }
-
-  const avatar = $("#profileAvatar");
-
-  if (avatar) {
+  if (avatar && !photoPreviewUrl) {
     avatar.textContent = name.charAt(0).toUpperCase();
   }
 
-  const savedPhoto = selectedPhoto;
-
-  if (savedPhoto && avatar) {
+  if (avatar && photoPreviewUrl) {
     avatar.innerHTML = "";
-    const img = document.createElement("img");
-    img.src = savedPhoto;
-    img.alt = "Profile";
-    img.className = "profile-avatar";
-    avatar.replaceWith(img);
-    img.id = "profileAvatar";
+
+    const image = document.createElement("img");
+    image.src = photoPreviewUrl;
+    image.alt = "Profile preview";
+
+    avatar.appendChild(image);
   }
+
+  updateHeader();
 }
 
 /* =========================================
@@ -360,44 +341,42 @@ function updateUserUI() {
 ========================================= */
 
 function openEditAccount() {
-  showElement("#profileForm");
+  if (!currentUser) return;
 
-  const nameInput = $("#profileName");
+  showElement("#accountEditForm");
 
-  if (nameInput && currentUser) {
-    nameInput.value = currentUser.name || "";
-  }
+  $("#profileName").value = currentUser.name || "";
+  $("#profilePhone").value = currentUser.phone || "";
 
-  const phoneInput = $("#profilePhone");
-
-  if (phoneInput && currentUser) {
-    phoneInput.value = currentUser.phone || "";
-    phoneInput.readOnly = true;
-  }
+  $("#profileMessage").textContent = "";
 }
 
 function closeEditAccount() {
-  hideElement("#profileForm");
+  hideElement("#accountEditForm");
+
+  if ($("#profileMessage")) {
+    $("#profileMessage").textContent = "";
+  }
 }
 
 async function saveProfile(event) {
   event.preventDefault();
 
+  if (!currentUser) return;
+
   const name = $("#profileName")?.value.trim() || "";
+  const message = $("#profileMessage");
+  const submit = $('#profileForm button[type="submit"]');
 
   if (name.length < 2) {
-    showToast("সঠিক নাম লিখুন।");
+    if (message) message.textContent = "সঠিক নাম লিখুন।";
     return;
   }
 
-  const button = $(
-    '#profileForm button[type="submit"]'
-  );
+  submit.disabled = true;
+  submit.textContent = "সংরক্ষণ হচ্ছে...";
 
-  if (button) {
-    button.disabled = true;
-    button.textContent = "সংরক্ষণ হচ্ছে...";
-  }
+  if (message) message.textContent = "";
 
   try {
     const result = await apiRequest(API.profile, {
@@ -410,67 +389,63 @@ async function saveProfile(event) {
       name
     };
 
-    updateUserUI();
+    updateAccountUI();
     closeEditAccount();
 
     showToast("নাম সফলভাবে আপডেট হয়েছে।");
 
   } catch (error) {
-    showToast(error.message);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "পরিবর্তন সংরক্ষণ করুন";
+    if (message) {
+      message.textContent = error.message;
+    } else {
+      showToast(error.message);
     }
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Save Changes";
   }
 }
 
 /* =========================================
    PROFILE PHOTO PREVIEW
+   Note: This is not uploaded to the server.
 ========================================= */
 
-function previewProfilePhoto(event) {
+function handlePhotoPreview(event) {
   const file = event.target.files?.[0];
 
   if (!file) return;
 
   if (!file.type.startsWith("image/")) {
     showToast("শুধু ছবি নির্বাচন করুন।");
+    event.target.value = "";
     return;
   }
 
   if (file.size > 2 * 1024 * 1024) {
     showToast("ছবির সাইজ ২ MB-এর কম রাখুন।");
+    event.target.value = "";
     return;
   }
 
   const reader = new FileReader();
 
   reader.onload = () => {
-    selectedPhoto = String(reader.result || "");
+    photoPreviewUrl = String(reader.result || "");
+    updateAccountUI();
 
-    const avatar = $("#profileAvatar");
+    showToast("ছবির প্রিভিউ দেখানো হয়েছে; সার্ভারে আপলোড হয়নি।");
+  };
 
-    if (avatar) {
-      const img = document.createElement("img");
-      img.id = "profileAvatar";
-      img.className = "profile-avatar";
-      img.src = selectedPhoto;
-      img.alt = "Profile preview";
-
-      avatar.replaceWith(img);
-    }
-
-    showToast(
-      "ছবির প্রিভিউ দেখানো হয়েছে। সার্ভারে সংরক্ষণ হচ্ছে না।"
-    );
+  reader.onerror = () => {
+    showToast("ছবি পড়া যায়নি।");
   };
 
   reader.readAsDataURL(file);
 }
 
 /* =========================================
-   NAVIGATION
+   MAIN NAVIGATION
 ========================================= */
 
 function openTab(tabName) {
@@ -488,7 +463,7 @@ function openTab(tabName) {
     showElement(panels[tabName]);
   }
 
-  $$(".bottom-nav button[data-tab]").forEach(button => {
+  $$(".nav-item[data-tab]").forEach(button => {
     button.classList.toggle(
       "active",
       button.dataset.tab === tabName
@@ -502,108 +477,116 @@ function openTab(tabName) {
 }
 
 /* =========================================
-   LOAD SERVICES
+   SERVICE DATA
 ========================================= */
 
-function getServiceName(service) {
-  return (
-    service.name ||
+function serviceName(service) {
+  return service.name ||
     service.title ||
     service.serviceName ||
-    "সার্ভিস"
-  );
+    "সার্ভিস";
 }
 
-function getServiceIcon(service) {
-  return (
-    service.icon ||
+function serviceIcon(service) {
+  return service.icon ||
     service.emoji ||
-    "✨"
-  );
+    "✦";
 }
 
-function getServiceCategory(service) {
-  return (
-    service.categoryName ||
+function serviceCategory(service) {
+  return service.categoryName ||
     service.category ||
     service.group ||
-    "অন্যান্য"
-  );
+    "অন্যান্য";
 }
 
-function renderServices() {
+function serviceDescription(service) {
+  return service.description || "";
+}
+
+function renderServiceCard(service) {
+  const index = allServices.indexOf(service);
+
+  return `
+    <button class="service-card" type="button"
+      data-service-index="${index}">
+      <div class="service-icon">${escapeHTML(serviceIcon(service))}</div>
+      <h3>${escapeHTML(serviceName(service))}</h3>
+      <p>${escapeHTML(serviceDescription(service))}</p>
+    </button>
+  `;
+}
+
+function renderServiceGrids() {
   const homeGrid = $("#homeServiceGrid");
-  const categoryGrid = $("#allCategories");
+  const allGrid = $("#allCategories");
 
   if (!allServices.length) {
     const empty = `
-      <div class="about-box">
+      <div class="loading-card">
         বর্তমানে কোনো সার্ভিস পাওয়া যায়নি।
       </div>
     `;
 
     if (homeGrid) homeGrid.innerHTML = empty;
-    if (categoryGrid) categoryGrid.innerHTML = empty;
+    if (allGrid) allGrid.innerHTML = empty;
 
+    renderCategoryFilters();
     return;
   }
 
-  const serviceHTML = allServices.map((service, index) => {
-    const name = escapeHTML(getServiceName(service));
-    const icon = escapeHTML(getServiceIcon(service));
-    const description = escapeHTML(
-      service.description || ""
-    );
-
-    return `
-      <button
-        class="service-card"
-        type="button"
-        data-service-index="${index}"
-      >
-        <div class="service-icon">${icon}</div>
-        <h3>${name}</h3>
-        <p>${description}</p>
-      </button>
-    `;
-  }).join("");
-
   if (homeGrid) {
-    homeGrid.innerHTML = serviceHTML;
+    homeGrid.innerHTML = allServices
+      .slice(0, 12)
+      .map(renderServiceCard)
+      .join("");
   }
 
-  if (categoryGrid) {
-    categoryGrid.innerHTML = serviceHTML;
-  }
-
-  renderServiceCategories();
+  renderCategoryFilters();
+  renderFilteredServices();
 }
 
-function renderServiceCategories() {
-  const container = $("#categoryList");
+function renderCategoryFilters() {
+  const container = $("#categoryFilters");
 
   if (!container) return;
 
   const categories = [
-    ...new Set(
-      allServices.map(getServiceCategory)
-    )
+    "সব",
+    ...new Set(allServices.map(serviceCategory))
   ];
-
-  if (!categories.length) {
-    container.innerHTML = "";
-    return;
-  }
 
   container.innerHTML = categories.map(category => `
     <button
-      class="btn btn-light category-filter"
       type="button"
-      data-category="${escapeHTML(category)}"
-    >
+      class="category-filter ${selectedCategory === category ? "active" : ""}"
+      data-category-filter="${escapeHTML(category)}">
       ${escapeHTML(category)}
     </button>
   `).join("");
+}
+
+function renderFilteredServices() {
+  const grid = $("#allCategories");
+
+  if (!grid) return;
+
+  const filtered = selectedCategory === "সব"
+    ? allServices
+    : allServices.filter(
+        service => serviceCategory(service) === selectedCategory
+      );
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="loading-card">
+        এই ক্যাটাগরিতে কোনো সার্ভিস নেই।
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(renderServiceCard).join("");
 }
 
 async function loadServices() {
@@ -614,16 +597,29 @@ async function loadServices() {
       ? result.services
       : [];
 
-    renderServices();
+    renderServiceGrids();
 
   } catch (error) {
     console.error("Services load error:", error);
-    showToast("সার্ভিস লোড করা যায়নি।");
+
+    const empty = `
+      <div class="loading-card">
+        সার্ভিস লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+      </div>
+    `;
+
+    if ($("#homeServiceGrid")) {
+      $("#homeServiceGrid").innerHTML = empty;
+    }
+
+    if ($("#allCategories")) {
+      $("#allCategories").innerHTML = empty;
+    }
   }
 }
 
 /* =========================================
-   SERVICE DETAILS
+   SERVICE POPUP
 ========================================= */
 
 function openService(index) {
@@ -631,83 +627,97 @@ function openService(index) {
 
   if (!service) return;
 
-  const name = escapeHTML(getServiceName(service));
+  const title = escapeHTML(serviceName(service));
   const description = escapeHTML(
-    service.description ||
+    serviceDescription(service) ||
     "এই সার্ভিসের বিস্তারিত তথ্য শিগগিরই যুক্ত করা হবে।"
   );
 
   openPopup(`
-    <div class="popup-header">
-      <h2>${name}</h2>
-      <button class="popup-close" data-close-popup type="button">×</button>
-    </div>
-
-    <div class="popup-note">
-      ${description}
-    </div>
-
-    <p class="muted small" style="margin-top:14px">
-      সার্ভিসের বিস্তারিত ও ব্যবহারযোগ্য সুবিধা
-      অ্যাডমিন কর্তৃক যুক্ত হলে এখানে দেখা যাবে।
+    <h2>${title}</h2>
+    <div class="popup-note">${description}</div>
+    <p style="margin-top:15px;color:#81788f;font-size:13px">
+      সার্ভিসের বিস্তারিত তথ্য অ্যাডমিন কর্তৃক যুক্ত হলে এখানে দেখা যাবে।
     </p>
   `);
 }
 
 /* =========================================
-   LOAD BANNERS
+   BANNERS
 ========================================= */
+
+function createBannerElement(banner) {
+  const card = document.createElement("div");
+  card.className = "offer-card";
+
+  const imageUrl = safeImageUrl(banner.imageUrl);
+
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = banner.title || "RS PAY Offer";
+    image.loading = "lazy";
+
+    card.appendChild(image);
+  } else {
+    card.className = "offer-placeholder";
+
+    const label = document.createElement("span");
+    label.textContent = "RS PAY OFFER";
+
+    const title = document.createElement("h3");
+    title.textContent = banner.title || "নতুন অফার";
+
+    const description = document.createElement("p");
+    description.textContent = banner.description || "";
+
+    card.append(label, title, description);
+  }
+
+  return card;
+}
 
 function renderBanners(banners) {
   const container = $("#homeBanners");
 
   if (!container) return;
 
+  container.replaceChildren();
+
   const list = Array.isArray(banners)
-    ? banners.filter(item => item.enabled !== false)
+    ? banners.filter(banner => banner.enabled !== false)
     : [];
 
-  if (!list.length) {
-    container.innerHTML = `
-      <div class="banner-card">
-        <div class="banner-placeholder">
-          <h3>RS PAY</h3>
-          <p>নতুন অফার ও আপডেট এখানে দেখতে পাবেন।</p>
-        </div>
-      </div>
-    `;
+  const dashboardBanners = list.filter(banner => {
+    const slot = banner.slot || banner.position;
+    return slot === "dashboard_home";
+  });
+
+  const visibleBanners = dashboardBanners.length
+    ? dashboardBanners
+    : list;
+
+  if (!visibleBanners.length) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "offer-placeholder";
+
+    const label = document.createElement("span");
+    label.textContent = "RS PAY OFFERS";
+
+    const title = document.createElement("h3");
+    title.textContent = "আপনার অফার এখানে দেখানো হবে";
+
+    const description = document.createElement("p");
+    description.textContent = "অ্যাডমিন থেকে ব্যানার যুক্ত হলে এখানে দেখা যাবে।";
+
+    placeholder.append(label, title, description);
+    container.appendChild(placeholder);
     return;
   }
 
-  container.innerHTML = list.map(banner => {
-    const title = escapeHTML(banner.title || "নতুন অফার");
-    const description = escapeHTML(
-      banner.description || ""
-    );
-
-    const image = safeImageUrl(banner.imageUrl);
-
-    if (image) {
-      return `
-        <div class="banner-card">
-          <img
-            src="${escapeHTML(image)}"
-            alt="${title}"
-            loading="lazy"
-          >
-        </div>
-      `;
-    }
-
-    return `
-      <div class="banner-card">
-        <div class="banner-placeholder">
-          <h3>${title}</h3>
-          <p>${description}</p>
-        </div>
-      </div>
-    `;
-  }).join("");
+  visibleBanners.forEach(banner => {
+    container.appendChild(createBannerElement(banner));
+  });
 }
 
 async function loadSiteContent() {
@@ -718,19 +728,18 @@ async function loadSiteContent() {
 
     const landing = result.content?.landing || {};
 
-    const heroTitle = $("#heroTitle");
-    const heroSubtitle = $("#heroSubtitle");
-
-    if (heroTitle && landing.title) {
-      heroTitle.textContent = landing.title;
+    if (landing.title) {
+      const title = $("#landingView .hero-content h1");
+      if (title) title.textContent = landing.title;
     }
 
-    if (heroSubtitle && landing.subtitle) {
-      heroSubtitle.textContent = landing.subtitle;
+    if (landing.subtitle) {
+      const subtitle = $("#landingView .hero-content > p");
+      if (subtitle) subtitle.textContent = landing.subtitle;
     }
 
   } catch (error) {
-    console.error("Content load error:", error);
+    console.error("Site content error:", error);
     renderBanners([]);
   }
 }
@@ -747,77 +756,58 @@ function openPopup(content) {
 
   popupContent.innerHTML = content;
   overlay.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
 }
 
 function closePopup() {
   hideElement("#popupOverlay");
+  document.body.style.overflow = "";
 }
 
-function showDemoPopup(type) {
-  const popups = {
+function showInfoPopup(type) {
+  const content = {
     balance: `
-      <div class="popup-header">
-        <h2>ব্যালেন্স তথ্য</h2>
-        <button class="popup-close" data-close-popup type="button">×</button>
-      </div>
-
+      <h2>ব্যালেন্স তথ্য</h2>
       <div class="popup-note">
-        এটি শুধু ডেমো প্রদর্শন। এখানে কোনো প্রকৃত
+        এটি শুধুমাত্র ডেমো প্রদর্শন। এখানে প্রকৃত
         আর্থিক ব্যালেন্স বা লেনদেন দেখানো হচ্ছে না।
       </div>
-
       <h2 style="margin-top:20px">৳ ০.০০</h2>
-      <p class="muted small">ডেমো ব্যালেন্স</p>
+      <p style="color:#81788f;font-size:12px">ডেমো ডিসপ্লে</p>
     `,
 
     deposit: `
-      <div class="popup-header">
-        <h2>ডিপোজিট হিস্টোরি</h2>
-        <button class="popup-close" data-close-popup type="button">×</button>
-      </div>
-
+      <h2>ডিপোজিট হিস্টোরি</h2>
       <div class="popup-note">
-        ডিপোজিট ইতিহাস দেখানোর সুবিধা এখনো ডেমো অবস্থায়।
-        এখানে কোনো প্রকৃত জমা বা পেমেন্ট করা হচ্ছে না।
+        ডিপোজিট ইতিহাসের প্যানেলটি এখনো ডেমো অবস্থায়।
+        এখানে কোনো প্রকৃত পেমেন্ট বা জমা করা হচ্ছে না।
       </div>
-
       <p style="margin-top:18px;text-align:center">
-        কোনো ডেমো রেকর্ড নেই।
+        কোনো রেকর্ড নেই।
       </p>
     `,
 
     recharge: `
-      <div class="popup-header">
-        <h2>রিচার্জ হিস্টোরি</h2>
-        <button class="popup-close" data-close-popup type="button">×</button>
-      </div>
-
+      <h2>রিচার্জ হিস্টোরি</h2>
       <div class="popup-note">
         এটি ডেমো হিস্টোরি প্যানেল। কোনো প্রকৃত রিচার্জ
         বা আর্থিক লেনদেন এখানে সম্পন্ন হয় না।
       </div>
-
       <p style="margin-top:18px;text-align:center">
         কোনো রেকর্ড নেই।
       </p>
     `,
 
     settings: `
-      <div class="popup-header">
-        <h2>অ্যাকাউন্ট সেটিংস</h2>
-        <button class="popup-close" data-close-popup type="button">×</button>
-      </div>
-
-      <p class="muted">
+      <h2>অ্যাকাউন্ট সেটিংস</h2>
+      <div class="popup-note">
         অ্যাকাউন্ট সেটিংসের অতিরিক্ত সুবিধা
         পরবর্তী আপডেটে যুক্ত করা হবে।
-      </p>
+      </div>
     `
   };
 
-  openPopup(
-    popups[type] || popups.settings
-  );
+  openPopup(content[type] || content.settings);
 }
 
 /* =========================================
@@ -835,9 +825,12 @@ async function logout() {
   }
 
   currentUser = null;
-  selectedPhoto = "";
+  photoPreviewUrl = "";
+  selectedCategory = "সব";
 
+  closePopup();
   showLanding();
+
   showToast("আপনি লগআউট করেছেন।");
 }
 
@@ -846,7 +839,7 @@ async function logout() {
 ========================================= */
 
 function setupEvents() {
-  // Landing page buttons
+  // Landing header
 
   $("#landingLogin")?.addEventListener("click", () => {
     showAuth("login");
@@ -855,6 +848,24 @@ function setupEvents() {
   $("#landingRegister")?.addEventListener("click", () => {
     showAuth("register");
   });
+
+  $("#headerAccount")?.addEventListener("click", () => {
+    showApp();
+    openTab("account");
+  });
+
+  $("#brandHome")?.addEventListener("click", event => {
+    event.preventDefault();
+
+    if (currentUser) {
+      showApp();
+      openTab("home");
+    } else {
+      showLanding();
+    }
+  });
+
+  // Hero buttons
 
   $("#heroGetStarted")?.addEventListener("click", () => {
     showAuth("register");
@@ -868,7 +879,7 @@ function setupEvents() {
     showAuth("register");
   });
 
-  // Auth page
+  // Authentication
 
   $("#backToLanding")?.addEventListener("click", showLanding);
 
@@ -885,7 +896,7 @@ function setupEvents() {
     handleAuthSubmit
   );
 
-  // Navigation
+  // Main navigation
 
   $$("[data-tab]").forEach(button => {
     button.addEventListener("click", () => {
@@ -893,15 +904,7 @@ function setupEvents() {
     });
   });
 
-  $("#brandHome")?.addEventListener("click", () => {
-    openTab("home");
-  });
-
-  $("#headerAccount")?.addEventListener("click", () => {
-    openTab("account");
-  });
-
-  // Account editing
+  // Account
 
   $("#editAccountBtn")?.addEventListener(
     "click",
@@ -920,94 +923,55 @@ function setupEvents() {
 
   $("#profilePhoto")?.addEventListener(
     "change",
-    previewProfilePhoto
+    handlePhotoPreview
   );
-
-  // Account popup buttons
-
-  $$("[data-popup]").forEach(button => {
-    button.addEventListener("click", () => {
-      showDemoPopup(button.dataset.popup);
-    });
-  });
-
-  // Service cards
-
-  document.addEventListener("click", event => {
-    const serviceButton = event.target.closest(
-      "[data-service-index]"
-    );
-
-    if (serviceButton) {
-      openService(
-        Number(serviceButton.dataset.serviceIndex)
-      );
-    }
-
-    const categoryButton = event.target.closest(
-      "[data-category]"
-    );
-
-    if (categoryButton) {
-      const category = categoryButton.dataset.category;
-
-      const filtered = allServices.filter(service => {
-        return getServiceCategory(service) === category;
-      });
-
-      const grid = $("#allCategories");
-
-      if (grid) {
-        grid.innerHTML = filtered.map(service => {
-          const index = allServices.indexOf(service);
-
-          return `
-            <button
-              class="service-card"
-              type="button"
-              data-service-index="${index}"
-            >
-              <div class="service-icon">
-                ${escapeHTML(getServiceIcon(service))}
-              </div>
-              <h3>${escapeHTML(getServiceName(service))}</h3>
-              <p>${escapeHTML(service.description || "")}</p>
-            </button>
-          `;
-        }).join("");
-      }
-    }
-
-    // Popup close buttons
-
-    if (event.target.closest("[data-close-popup]")) {
-      closePopup();
-    }
-  });
-
-  // Popup outside click
-
-  $("#popupOverlay")?.addEventListener("click", event => {
-    if (event.target.id === "popupOverlay") {
-      closePopup();
-    }
-  });
-
-  $("#closePopup")?.addEventListener(
-    "click",
-    closePopup
-  );
-
-  // Logout
 
   $("#logoutBtn")?.addEventListener(
     "click",
     logout
   );
+
+  // Popup triggers
+
+  document.addEventListener("click", event => {
+    const popupButton = event.target.closest("[data-popup]");
+
+    if (popupButton) {
+      showInfoPopup(popupButton.dataset.popup);
+    }
+
+    const serviceButton = event.target.closest("[data-service-index]");
+
+    if (serviceButton) {
+      openService(Number(serviceButton.dataset.serviceIndex));
+    }
+
+    const categoryButton = event.target.closest("[data-category-filter]");
+
+    if (categoryButton) {
+      selectedCategory = categoryButton.dataset.categoryFilter;
+      renderCategoryFilters();
+      renderFilteredServices();
+    }
+  });
+
+  $("#closePopup")?.addEventListener("click", closePopup);
+
+  $("#popupOverlay")?.addEventListener("click", event => {
+    if (event.target === $("#popupOverlay")) {
+      closePopup();
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closePopup();
+    }
+  });
 }
 
 /* =========================================
-   SESSION CHECK
+   CHECK EXISTING SESSION
 ========================================= */
 
 async function checkExistingSession() {
@@ -1017,25 +981,31 @@ async function checkExistingSession() {
     currentUser = result.user || null;
 
     if (currentUser) {
-      updateUserUI();
+      updateAccountUI();
       showApp();
       return;
     }
 
   } catch {
-    // Not logged in
+    // No active login session.
   }
 
+  currentUser = null;
   showLanding();
 }
 
 /* =========================================
-   START APP
+   INITIALIZE
 ========================================= */
 
 async function startApp() {
-  setupEvents();
+  const year = $("#year");
 
+  if (year) {
+    year.textContent = new Date().getFullYear();
+  }
+
+  setupEvents();
   setAuthMode("login");
 
   await Promise.all([
