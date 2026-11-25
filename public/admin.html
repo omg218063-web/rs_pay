@@ -4,103 +4,419 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RS PAY | Admin Panel</title>
-  <link rel="stylesheet" href="admin.css">
+  <meta name="theme-color" content="#21133e">
+  <title>RS PAY | Admin Control Center</title>
+  <link rel="stylesheet" href="/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <main class="admin-wrap">
-    <section class="login-box" id="adminLogin">
-      <div class="logo">RS <span>PAY</span></div>
-      <h1>Admin Login</h1>
-      <p>আপনার অ্যাডমিন পাসওয়ার্ড দিয়ে প্রবেশ করুন।</p>
+
+  <section class="login-screen" id="adminLogin">
+    <div class="login-card">
+      <div class="brand-mark">RS <span>PAY</span></div>
+      <div class="login-icon">♛</div>
+      <p class="eyebrow">SECURE ADMIN ACCESS</p>
+      <h1>Admin Control Center</h1>
+      <p class="muted">আপনার অ্যাডমিন পাসওয়ার্ড দিয়ে প্রবেশ করুন।</p>
+
       <form id="adminLoginForm">
-        <label>Admin Password</label>
-        <input id="adminPassword" type="password" required autocomplete="current-password">
-        <button type="submit">LOGIN</button>
-        <p id="loginMessage"></p>
+        <label for="adminPassword">Admin Password</label>
+        <input id="adminPassword" type="password"
+          autocomplete="current-password" required
+          placeholder="আপনার পাসওয়ার্ড লিখুন">
+        <button class="primary-btn full-btn" type="submit" id="loginButton">
+          নিরাপদে প্রবেশ করুন
+        </button>
+        <p class="form-message" id="loginMessage"></p>
       </form>
-    </section>
+      <a class="back-site" href="/">← মূল ওয়েবসাইটে ফিরে যান</a>
+    </div>
+  </section>
 
-    <section id="adminDashboard" class="hidden">
-      <header class="admin-header">
-        <div class="logo">RS <span>PAY</span></div>
-        <div><span>ADMIN CONTROL PANEL</span><button id="adminLogout">Logout</button></div>
-      </header>
+  <div id="adminDashboard" class="hidden">
 
-      <div class="admin-intro">
-        <div><small>CONTROL CENTER</small><h1>Admin Dashboard</h1><p>আপনার ওয়েবসাইটের কনটেন্ট ও সার্ভিস পরিচালনা করুন।</p></div>
+    <header class="top-header">
+      <a class="brand-mark" href="/admin.html">RS <span>PAY</span></a>
+      <div class="header-right">
+        <span class="admin-status"><i></i> ADMIN ACCESS</span>
+        <button id="adminLogout" class="logout-button">Logout ↗</button>
       </div>
+    </header>
 
-      <nav class="admin-tabs">
-        <button class="active" data-panel="contentPanel">Website Content</button>
-        <button data-panel="bannerPanel">Banners</button>
-        <button data-panel="servicePanel">Services</button>
-        <button data-panel="userPanel">Users</button>
-      </nav>
+    <main class="main-content">
 
-      <section class="panel" id="contentPanel">
-        <h2>Landing Page Content</h2>
-        <form id="contentForm">
-          <label>Hero Title</label>
-          <input id="heroTitleInput" maxlength="180">
-          <label>Hero Subtitle</label>
-          <textarea id="heroSubtitleInput" maxlength="500"></textarea>
-          <button type="submit">Save Content</button>
-          <p class="message" id="contentMessage"></p>
-        </form>
+      <section class="welcome-row">
+        <div>
+          <p class="eyebrow">RS PAY MANAGEMENT SYSTEM</p>
+          <h1>Admin Dashboard</h1>
+          <p class="muted">আপনার ওয়েবসাইটের সবকিছু এক জায়গা থেকে পরিচালনা করুন।</p>
+        </div>
+        <div class="date-card">
+          <span>CONTROL CENTER</span>
+          <strong id="todayDate">RS PAY</strong>
+        </div>
       </section>
 
-      <section class="panel hidden" id="bannerPanel">
-        <h2>Banner Management</h2>
-        <form id="bannerForm">
-          <input type="hidden" id="bannerId">
-          <label>Banner Title</label>
-          <input id="bannerTitle" required maxlength="100">
-          <label>Description</label>
-          <textarea id="bannerDescription" maxlength="300"></textarea>
-          <label>Image URL</label>
-          <input id="bannerImage" type="url" placeholder="https://example.com/banner.jpg">
-          <label>Link URL (optional)</label>
-          <input id="bannerLink" type="url">
-          <label>Position</label>
-          <select id="bannerPosition">
-            <option value="landing_top">Landing Top</option>
-            <option value="landing_middle">Landing Middle</option>
-            <option value="dashboard_home">Dashboard Home</option>
-          </select>
-          <label class="check"><input id="bannerEnabled" type="checkbox" checked> Enabled</label>
-          <button type="submit">Save Banner</button>
-          <button type="button" class="secondary" id="bannerReset">Clear</button>
-          <p class="message" id="bannerMessage"></p>
-        </form>
-        <div id="bannerList" class="admin-list"></div>
+      <!-- HOME -->
+      <section class="admin-panel" id="homePanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">OVERVIEW</p>
+            <h2>হোম ড্যাশবোর্ড</h2>
+            <p class="muted">কাস্টমার ও ওয়েবসাইটের সারসংক্ষেপ।</p>
+          </div>
+          <button class="secondary-btn" id="refreshDashboard">↻ Refresh</button>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card purple-stat">
+            <span class="stat-icon">♙</span>
+            <p>মোট কাস্টমার</p>
+            <h3 id="totalUsers">—</h3>
+            <small>Registered customers</small>
+          </article>
+
+          <article class="stat-card green-stat">
+            <span class="stat-icon">●</span>
+            <p>অনলাইন কাস্টমার</p>
+            <h3 id="onlineUsers">—</h3>
+            <small>Last 5 minutes activity</small>
+          </article>
+
+          <article class="stat-card gray-stat">
+            <span class="stat-icon">◌</span>
+            <p>অফলাইন কাস্টমার</p>
+            <h3 id="offlineUsers">—</h3>
+            <small>Currently inactive</small>
+          </article>
+
+          <article class="stat-card gold-stat">
+            <span class="stat-icon">▣</span>
+            <p>অর্ডার তথ্য</p>
+            <h3 id="totalOrders">—</h3>
+            <small id="orderStatus">তথ্য যাচাই হচ্ছে</small>
+          </article>
+        </div>
+
+        <div class="two-column">
+          <article class="content-card">
+            <div class="card-heading">
+              <div>
+                <h3>কাস্টমার অ্যানালাইসিস</h3>
+                <p class="muted">অ্যাকাউন্টের বর্তমান অবস্থা</p>
+              </div>
+              <span class="mini-icon">♙</span>
+            </div>
+            <div class="analysis-row">
+              <span>অনলাইন</span>
+              <strong id="onlinePercent">—</strong>
+            </div>
+            <div class="progress-track">
+              <div id="onlineProgress" class="progress-fill"></div>
+            </div>
+            <div class="analysis-row">
+              <span>অফলাইন</span>
+              <strong id="offlinePercent">—</strong>
+            </div>
+            <div class="progress-track">
+              <div id="offlineProgress" class="progress-fill offline-fill"></div>
+            </div>
+            <p class="small-note">অনলাইন অবস্থা সর্বশেষ ৫ মিনিটের অ্যাক্টিভিটি অনুযায়ী গণনা করা হয়।</p>
+          </article>
+
+          <article class="content-card">
+            <div class="card-heading">
+              <div>
+                <h3>দ্রুত কাজ</h3>
+                <p class="muted">অ্যাডমিন শর্টকাট</p>
+              </div>
+              <span class="mini-icon">✦</span>
+            </div>
+            <button class="quick-action" data-go="usersPanel">♙ কাস্টমার তালিকা <span>→</span></button>
+            <button class="quick-action" data-go="bannerPanel">▧ নতুন ব্যানার যোগ করুন <span>→</span></button>
+            <button class="quick-action" data-go="servicePanel">✚ নতুন সার্ভিস যোগ করুন <span>→</span></button>
+            <button class="quick-action" data-go="contentPanel">✎ ওয়েবসাইটের লেখা পরিবর্তন <span>→</span></button>
+          </article>
+        </div>
+
+        <article class="content-card table-card">
+          <div class="card-heading">
+            <div>
+              <h3>সাম্প্রতিক কাস্টমার</h3>
+              <p class="muted">সর্বশেষ রেজিস্ট্রেশন করা অ্যাকাউন্ট</p>
+            </div>
+            <button class="text-button" data-go="usersPanel">সব দেখুন →</button>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>নাম</th>
+                  <th>মোবাইল নম্বর</th>
+                  <th>অবস্থা</th>
+                  <th>রেজিস্ট্রেশন</th>
+                </tr>
+              </thead>
+              <tbody id="recentUsers">
+                <tr><td colspan="4" class="empty-cell">লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="content-card table-card">
+          <div class="card-heading">
+            <div>
+              <h3>ই-ওয়ালেট / অর্ডার সারসংক্ষেপ</h3>
+              <p class="muted">শুধু তথ্য দেখার জন্য</p>
+            </div>
+          </div>
+          <div id="orderInformation" class="notice-box">
+            অর্ডার ডেটাবেসের তথ্য যাচাই করা হচ্ছে।
+          </div>
+        </article>
       </section>
 
-      <section class="panel hidden" id="servicePanel">
-        <h2>Service Management</h2>
-        <form id="serviceForm">
-          <input type="hidden" id="serviceId">
-          <label>Service Name</label>
-          <input id="serviceName" required maxlength="80">
-          <label>Description</label>
-          <textarea id="serviceDescription" maxlength="250"></textarea>
-          <label>Icon (Emoji)</label>
-          <input id="serviceIcon" maxlength="8" placeholder="✦">
-          <label class="check"><input id="serviceEnabled" type="checkbox" checked> Enabled</label>
-          <button type="submit">Save Service</button>
-          <button type="button" class="secondary" id="serviceReset">Clear</button>
-          <p class="message" id="serviceMessage"></p>
-        </form>
-        <div id="serviceList" class="admin-list"></div>
+      <!-- CUSTOMERS -->
+      <section class="admin-panel hidden" id="usersPanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CUSTOMER MANAGEMENT</p>
+            <h2>কাস্টমার তালিকা</h2>
+            <p class="muted">রেজিস্টার করা ব্যবহারকারীদের তথ্য দেখুন।</p>
+          </div>
+          <button class="secondary-btn" id="refreshUsers">↻ Refresh</button>
+        </div>
+
+        <div class="content-card">
+          <div class="search-row">
+            <input id="userSearch" type="search"
+              placeholder="নাম অথবা মোবাইল নম্বর দিয়ে খুঁজুন...">
+            <select id="userFilter">
+              <option value="all">সব কাস্টমার</option>
+              <option value="online">অনলাইন</option>
+              <option value="offline">অফলাইন</option>
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>নাম</th>
+                  <th>মোবাইল</th>
+                  <th>অবস্থা</th>
+                  <th>সর্বশেষ অ্যাক্টিভিটি</th>
+                  <th>রেজিস্ট্রেশন</th>
+                </tr>
+              </thead>
+              <tbody id="allUsers">
+                <tr><td colspan="5" class="empty-cell">লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small-note">নিরাপত্তার জন্য এখানে পাসওয়ার্ড বা ব্যক্তিগত গোপন তথ্য দেখানো হয় না।</p>
+        </div>
       </section>
 
-      <section class="panel hidden" id="userPanel">
-        <h2>Registered Users</h2>
-        <p>এখানে শুধু অ্যাকাউন্টের তালিকা দেখা যাবে।</p>
-        <div id="userList" class="admin-list"></div>
+      <!-- ORDERS -->
+      <section class="admin-panel hidden" id="ordersPanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">READ ONLY INFORMATION</p>
+            <h2>ই-ওয়ালেট ও অর্ডার</h2>
+            <p class="muted">শুধু বিদ্যমান রেকর্ড দেখার জায়গা।</p>
+          </div>
+          <span class="read-only-badge">READ ONLY</span>
+        </div>
+
+        <div class="content-card">
+          <div id="ordersPageInfo" class="notice-box">
+            বর্তমান সার্ভারে অর্ডার রেকর্ডের মডেল পাওয়া যায়নি।
+          </div>
+          <p class="small-note">এখানে কোনো অর্ডার তৈরি, পেমেন্ট, জমা বা উত্তোলনের ব্যবস্থা নেই।</p>
+        </div>
       </section>
-    </section>
-  </main>
-  <script src="admin.js"></script>
+
+      <!-- BANNERS / IMAGE MANAGEMENT -->
+      <section class="admin-panel hidden" id="bannerPanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">VISUAL MANAGEMENT</p>
+            <h2>ব্যানার ও ছবি</h2>
+            <p class="muted">গ্যালারি থেকে ছবি বেছে ওয়েবসাইটে যুক্ত করুন।</p>
+          </div>
+        </div>
+
+        <div class="two-column editor-layout">
+          <article class="content-card">
+            <h3 id="bannerFormHeading">নতুন ব্যানার যোগ করুন</h3>
+            <form id="bannerForm">
+              <input type="hidden" id="bannerId">
+
+              <label for="bannerTitle">ব্যানারের নাম</label>
+              <input id="bannerTitle" maxlength="100" required
+                placeholder="যেমন: ঈদ স্পেশাল অফার">
+
+              <label for="bannerDescription">ব্যানারের বিবরণ</label>
+              <textarea id="bannerDescription" maxlength="300"
+                placeholder="ব্যানার সম্পর্কে কিছু লিখুন"></textarea>
+
+              <label for="bannerFile">ব্যানার ছবি নির্বাচন করুন</label>
+              <input id="bannerFile" type="file"
+                accept="image/png,image/jpeg,image/webp" required>
+              <small class="small-note">PNG, JPG বা WEBP। সর্বোচ্চ ১.২ MB। কোনো ইমেজ URL লাগবে না।</small>
+
+              <div class="image-preview-wrap">
+                <img id="bannerPreview" class="image-preview hidden" alt="Banner preview">
+                <div id="previewPlaceholder" class="preview-placeholder">
+                  <span>▧</span>
+                  <p>ছবির প্রিভিউ এখানে দেখা যাবে</p>
+                </div>
+              </div>
+
+              <label for="bannerLink">ব্যানারে ক্লিক করলে কোথায় যাবে? (ঐচ্ছিক)</label>
+              <input id="bannerLink" type="url"
+                placeholder="https://example.com">
+
+              <label for="bannerPosition">ওয়েবসাইটে কোথায় দেখাবে?</label>
+              <select id="bannerPosition">
+                <option value="landing_top">Landing Top</option>
+                <option value="landing_middle">Landing Middle</option>
+                <option value="dashboard_home">Dashboard Home</option>
+              </select>
+
+              <label class="check-label">
+                <input id="bannerEnabled" type="checkbox" checked>
+                ওয়েবসাইটে সক্রিয় রাখুন
+              </label>
+
+              <div class="form-buttons">
+                <button class="primary-btn" type="submit" id="bannerSaveButton">ব্যানার সংরক্ষণ</button>
+                <button class="secondary-btn" type="button" id="bannerReset">ফর্ম পরিষ্কার</button>
+              </div>
+              <p class="form-message" id="bannerMessage"></p>
+            </form>
+          </article>
+
+          <article class="content-card">
+            <div class="card-heading">
+              <div>
+                <h3>আপনার ব্যানারগুলো</h3>
+                <p class="muted">সংরক্ষিত ছবি ও ব্যানার</p>
+              </div>
+              <span class="mini-icon">▧</span>
+            </div>
+            <div id="bannerList" class="image-list">
+              <p class="empty-cell">লোড হচ্ছে...</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- SERVICES -->
+      <section class="admin-panel hidden" id="servicePanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SERVICE MANAGEMENT</p>
+            <h2>সার্ভিস পরিচালনা</h2>
+            <p class="muted">নতুন সার্ভিস যোগ করুন অথবা পুরোনো সার্ভিস সম্পাদনা করুন।</p>
+          </div>
+        </div>
+
+        <div class="two-column editor-layout">
+          <article class="content-card">
+            <h3 id="serviceFormHeading">নতুন সার্ভিস যোগ করুন</h3>
+            <form id="serviceForm">
+              <input type="hidden" id="serviceId">
+
+              <label for="serviceName">সার্ভিসের নাম</label>
+              <input id="serviceName" maxlength="80" required
+                placeholder="যেমন: Mobile Recharge">
+
+              <label for="serviceDescription">সার্ভিসের বিবরণ</label>
+              <textarea id="serviceDescription" maxlength="250"
+                placeholder="সার্ভিস সম্পর্কে লিখুন"></textarea>
+
+              <label for="serviceIcon">সার্ভিস আইকন (Emoji)</label>
+              <input id="serviceIcon" maxlength="8" value="✦"
+                placeholder="📱">
+
+              <label class="check-label">
+                <input id="serviceEnabled" type="checkbox" checked>
+                সার্ভিস সক্রিয় রাখুন
+              </label>
+
+              <div class="form-buttons">
+                <button class="primary-btn" type="submit">সার্ভিস সংরক্ষণ</button>
+                <button class="secondary-btn" type="button" id="serviceReset">পরিষ্কার</button>
+              </div>
+              <p class="form-message" id="serviceMessage"></p>
+            </form>
+          </article>
+
+          <article class="content-card">
+            <h3>বিদ্যমান সার্ভিসসমূহ</h3>
+            <div id="serviceList" class="simple-list">
+              <p class="empty-cell">লোড হচ্ছে...</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- WEBSITE CONTENT -->
+      <section class="admin-panel hidden" id="contentPanel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">WEBSITE CONTENT EDITOR</p>
+            <h2>ওয়েবসাইটের লেখা</h2>
+            <p class="muted">ল্যান্ডিং পেজের শিরোনাম ও বিবরণ পরিবর্তন করুন।</p>
+          </div>
+        </div>
+
+        <article class="content-card editor-card">
+          <form id="contentForm">
+            <label for="heroTitleInput">Landing Page Title</label>
+            <textarea id="heroTitleInput" maxlength="180"></textarea>
+
+            <label for="heroSubtitleInput">Landing Page Description</label>
+            <textarea id="heroSubtitleInput" maxlength="500"></textarea>
+
+            <button class="primary-btn" type="submit">পরিবর্তন সংরক্ষণ করুন</button>
+            <p class="form-message" id="contentMessage"></p>
+          </form>
+        </article>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-navigation">
+      <button class="bottom-nav-item active" data-panel="homePanel">
+        <span>⌂</span><small>হোম</small>
+      </button>
+      <button class="bottom-nav-item" data-panel="usersPanel">
+        <span>♙</span><small>কাস্টমার</small>
+      </button>
+      <button class="bottom-nav-item" data-panel="ordersPanel">
+        <span>▣</span><small>ই-ওয়ালেট</small>
+      </button>
+      <button class="bottom-nav-item" data-panel="bannerPanel">
+        <span>▧</span><small>ব্যানার</small>
+      </button>
+      <button class="bottom-nav-item" data-panel="servicePanel">
+        <span>✚</span><small>সার্ভিস</small>
+      </button>
+      <button class="bottom-nav-item" data-panel="contentPanel">
+        <span>⚙</span><small>কনটেন্ট</small>
+      </button>
+    </nav>
+
+    <div id="adminToast" class="toast hidden"></div>
+  </div>
+
+  <script src="/admin.js"></script>
 </body>
 </html>
