@@ -1017,3 +1017,33 @@ async function startApp() {
 }
 
 document.addEventListener("DOMContentLoaded", startApp);
+/* RS PAY CUSTOMER ONLINE STATUS */
+
+async function rsPayHeartbeat() {
+  if (document.visibilityState !== "visible") return;
+
+  try {
+    await fetch("/api/auth/heartbeat", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: "{}"
+    });
+  } catch (error) {
+    console.warn("Heartbeat unavailable");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  rsPayHeartbeat();
+
+  setInterval(rsPayHeartbeat, 60 * 1000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      rsPayHeartbeat();
+    }
+  });
+});
