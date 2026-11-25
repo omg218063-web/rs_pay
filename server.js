@@ -2,8 +2,8 @@
 "use strict";
 
 // ============================================
-// RS PAY - SERVER.JS
-// Existing MongoDB and existing service data
+// RS PAY - COMPLETE SERVER
+// Existing MongoDB + Admin Panel + Image Upload
 // ============================================
 
 const express = require("express");
@@ -53,14 +53,17 @@ app.use(helmet({
   }
 }));
 
-app.use(express.json({ limit: "50kb" }));
+// 2 MB supports the admin.js image upload payload.
+app.use(express.json({ limit: "2mb" }));
+
 app.use(express.urlencoded({
   extended: false,
   limit: "20kb"
 }));
 
 // ============================================
-// EXISTING DATABASE MODELS
+// DATABASE MODELS
+// Existing collections are preserved.
 // ============================================
 
 const UserSchema = new mongoose.Schema({
@@ -90,6 +93,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     select: false
+  },
+
+  lastSeen: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -100,10 +108,6 @@ const User =
   mongoose.models.User ||
   mongoose.model("User", UserSchema);
 
-
-// Existing service collection.
-// strict:false keeps any existing service fields.
-
 const ServiceSchema = new mongoose.Schema({}, {
   timestamps: true,
   strict: false
@@ -112,9 +116,6 @@ const ServiceSchema = new mongoose.Schema({}, {
 const Service =
   mongoose.models.Service ||
   mongoose.model("Service", ServiceSchema);
-
-
-// Existing banner collection.
 
 const BannerSchema = new mongoose.Schema({}, {
   timestamps: true,
@@ -125,9 +126,6 @@ const Banner =
   mongoose.models.Banner ||
   mongoose.model("Banner", BannerSchema);
 
-
-// Existing website content collection.
-
 const SiteContentSchema = new mongoose.Schema({}, {
   timestamps: true,
   strict: false
@@ -137,6 +135,30 @@ const SiteContent =
   mongoose.models.SiteContent ||
   mongoose.model("SiteContent", SiteContentSchema);
 
+// Images are stored in MongoDB, not Render's temporary disk.
+const MediaSchema = new mongoose.Schema({
+  contentType: {
+    type: String,
+    required: true
+  },
+
+  data: {
+    type: Buffer,
+    required: true
+  },
+
+  size: {
+    type: Number,
+    required: true
+  }
+}, {
+  timestamps: true,
+  collection: "media"
+});
+
+const Media =
+  mongoose.models.RSPayMedia ||
+  mongoose.model("RSPayMedia", MediaSchema);
 
 // ============================================
 // SESSION
@@ -145,12 +167,18 @@ const SiteContent =
 const sessionSecret = process.env.SESSION_SECRET;
 
 if (production && (!sessionSecret || sessionSecret.length < 32)) {
-  throw new Error("SESSION_SECRET must contain at least 32 characters");
+  throw new Error(
+    "SESSION_SECRET must contain at least 32 characters"
+  );
 }
 
 app.use(session({
   name: "rs_pay_session",
-  secret: sessionSecret || "local-only-rs-pay-development-secret",
+
+  secret:
+    sessionSecret ||
+    "local-only-rs-pay-development-secret",
+
   resave: false,
   saveUninitialized: false,
 
@@ -188,7 +216,7 @@ const adminLimiter = rateLimit({
 });
 
 // ============================================
-// BASIC REQUEST PROTECTION
+// REQUEST PROTECTION
 // ============================================
 
 app.use((req, res, next) => {
@@ -240,7 +268,9 @@ function normalizePhone(value) {
     digits = "0" + digits;
   }
 
-  return /^01[3-9]\d{8}$/.test(digits) ? digits : null;
+  return /^01[3-9]\d{8}$/.test(digits)
+    ? digits
+    : null;
 }
 
 function requireAuth(req, res, next) {
@@ -292,12 +322,69 @@ function makeKey(value) {
   return clean(value, 60)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || crypto.randomUUID();
+    .replace(/^-|-$/g, "") ||
+    crypto.randomUUID();
+}
+
+function validObjectId(id) {
+  return mongoose.isValidObjectId(id);
+}
+
+// ============================================
+// IMAGE UPLOAD VALIDATION
+// JPG / PNG / WEBP
+// Maximum 1.2 MB
+// ============================================
+
+function decodeImageData(dataUrl) {
+  if (typeof dataUrl !== "string") {
+    throw new Error("ছবি নির্বাচন করুন।");
+  }
+
+  const match = dataUrl.match(
+    /^data:(image\/jpeg|image\/png|image\/webp);base64,([A-Za-z0-9+/=]+)$/
+  );
+
+  if (!match) {
+    throw new Error("শুধু JPG, PNG অথবা WEBP ছবি গ্রহণযোগ্য।");
+  }
+
+  const contentType = match[1];
+  const buffer = Buffer.from(match[2], "base64");
+
+  if (!buffer.length || buffer.length > 1.2 * 1024 * 1024) {
+    throw new Error("ছবির সাইজ ১.২ MB-এর মধ্যে রাখুন।");
+  }
+
+  const isJpeg =
+    contentType === "image/jpeg" &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff;
+
+  const isPng =
+    contentType === "image/png" &&
+    buffer.subarray(0, 8).equals(
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+    );
+
+  const isWebp =
+    contentType === "image/webp" &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP";
+
+  if (!isJpeg && !isPng && !isWebp) {
+    throw new Error("ছবির ফাইলটি সঠিক নয়।");
+  }
+
+  return {
+    contentType,
+    buffer
+  };
 }
 
 // ============================================
 // USER REGISTRATION
-// First Name + Mobile + Password
 // ============================================
 
 app.post("/api/auth/register", authLimiter, async (req, res) => {
@@ -337,15 +424,14 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-
-    // Existing required email field compatibility.
     const email = `${phone}@users.rs-pay.invalid`;
 
     const user = await User.create({
       name,
       phone,
       email,
-      passwordHash
+      passwordHash,
+      lastSeen: new Date()
     });
 
     req.session.regenerate(err => {
@@ -395,13 +481,21 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
     const user = await User.findOne({ phone })
       .select("+passwordHash");
 
-    if (!user || !user.passwordHash ||
-        !(await bcrypt.compare(password, user.passwordHash))) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await bcrypt.compare(password, user.passwordHash))
+    ) {
       return res.status(401).json({
         success: false,
         message: "মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়।"
       });
     }
+
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastSeen: new Date() } }
+    );
 
     req.session.regenerate(err => {
       if (err) {
@@ -447,6 +541,11 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
       });
     }
 
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastSeen: new Date() } }
+    );
+
     res.json({
       success: true,
       user: publicUser(user)
@@ -463,7 +562,31 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
 });
 
 // ============================================
-// LOGOUT
+// USER HEARTBEAT
+// app.js calls this while the user is active.
+// ============================================
+
+app.post("/api/auth/heartbeat", requireAuth, async (req, res) => {
+  try {
+    await User.updateOne(
+      { _id: req.session.userId },
+      { $set: { lastSeen: new Date() } }
+    );
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error("Heartbeat error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "অ্যাক্টিভিটি আপডেট হয়নি।"
+    });
+  }
+});
+
+// ============================================
+// USER LOGOUT
 // ============================================
 
 app.post("/api/auth/logout", (req, res) => {
@@ -522,36 +645,70 @@ app.put("/api/account/profile", requireAuth, async (req, res) => {
 });
 
 // ============================================
+// PUBLIC IMAGE DELIVERY
+// MongoDB-backed persistent images
+// ============================================
+
+app.get("/api/media/:id", async (req, res) => {
+  try {
+    if (!validObjectId(req.params.id)) {
+      return res.status(400).end();
+    }
+
+    const media = await Media.findById(req.params.id)
+      .select("contentType data size")
+      .lean();
+
+    if (!media) {
+      return res.status(404).end();
+    }
+
+    res.set({
+      "Content-Type": media.contentType,
+      "Content-Length": media.size,
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff"
+    });
+
+    res.send(media.data);
+
+  } catch (error) {
+    console.error("Media delivery error:", error);
+    res.status(500).end();
+  }
+});
+
+// ============================================
 // PUBLIC WEBSITE CONTENT
-// Compatible with existing app.js
 // ============================================
 
 app.get("/api/site-content", async (req, res) => {
   try {
-    const doc = await SiteContent.findOne().lean();
-
-    const content = doc || {};
+    const doc = await SiteContent.findOne().lean() || {};
 
     const banners = await Banner.find({
       enabled: true
     }).lean();
 
-    const mappedBanners = banners.map(b => ({
-      ...b,
-      slot: b.slot || b.position,
-      linkUrl: b.linkUrl || b.link || ""
+    const mappedBanners = banners.map(banner => ({
+      ...banner,
+      slot: banner.slot || banner.position,
+      linkUrl: banner.linkUrl || banner.link || ""
     }));
 
     res.json({
       success: true,
+
       content: {
-        ...content,
-        landing: content.landing || {
-          title: content.heroTitle || "",
-          subtitle: content.heroSubtitle || "",
-          buttonText: content.buttonText || ""
+        ...doc,
+
+        landing: doc.landing || {
+          title: doc.heroTitle || "",
+          subtitle: doc.heroSubtitle || "",
+          buttonText: doc.buttonText || ""
         }
       },
+
       banners: mappedBanners
     });
 
@@ -566,16 +723,16 @@ app.get("/api/site-content", async (req, res) => {
 });
 
 // ============================================
-// EXISTING SERVICES
-// No new categories are inserted.
-// Existing collection data is preserved.
+// PUBLIC SERVICES
 // ============================================
 
 app.get("/api/services", async (req, res) => {
   try {
     const services = await Service.find({
       enabled: { $ne: false }
-    }).sort({ order: 1, createdAt: 1 }).lean();
+    })
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
 
     res.json({
       success: true,
@@ -651,9 +808,94 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
 });
 
 // ============================================
+// ADMIN DASHBOARD STATISTICS
+// ============================================
+
+app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    const fiveMinutesAgo = new Date(
+      Date.now() - 5 * 60 * 1000
+    );
+
+    const [
+      totalUsers,
+      onlineUsers,
+      recentUsers
+    ] = await Promise.all([
+      User.countDocuments(),
+
+      User.countDocuments({
+        lastSeen: { $gte: fiveMinutesAgo }
+      }),
+
+      User.find()
+        .select("name phone createdAt lastSeen")
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .lean()
+    ]);
+
+    const offlineUsers = Math.max(
+      0,
+      totalUsers - onlineUsers
+    );
+
+    res.json({
+      success: true,
+      totalUsers,
+      onlineUsers,
+      offlineUsers,
+      recentUsers,
+      ordersAvailable: false,
+      totalOrders: null
+    });
+
+  } catch (error) {
+    console.error("Admin stats error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "ড্যাশবোর্ডের তথ্য পাওয়া যায়নি।"
+    });
+  }
+});
+
+// ============================================
+// ADMIN IMAGE UPLOAD
+// POST /api/admin/media
+// Accepts admin.js imageData Base64 JSON.
+// ============================================
+
+app.post("/api/admin/media", requireAdmin, async (req, res) => {
+  try {
+    const decoded = decodeImageData(req.body.imageData);
+
+    const media = await Media.create({
+      contentType: decoded.contentType,
+      data: decoded.buffer,
+      size: decoded.buffer.length
+    });
+
+    const imageUrl = `/api/media/${media._id}`;
+
+    res.status(201).json({
+      success: true,
+      imageUrl,
+      mediaId: media._id
+    });
+
+  } catch (error) {
+    console.error("Image upload error:", error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message || "ছবি আপলোড করা যায়নি।"
+    });
+  }
+});
+
+// ============================================
 // ADMIN CONTENT
-// Matches existing admin.js:
-// /api/admin/content
 // ============================================
 
 app.get("/api/admin/content", requireAdmin, async (req, res) => {
@@ -662,12 +904,19 @@ app.get("/api/admin/content", requireAdmin, async (req, res) => {
 
     res.json({
       success: true,
+
       content: {
         ...doc,
+
         heroTitle:
-          doc.heroTitle || doc.landing?.title || "",
+          doc.heroTitle ||
+          doc.landing?.title ||
+          "",
+
         heroSubtitle:
-          doc.heroSubtitle || doc.landing?.subtitle || ""
+          doc.heroSubtitle ||
+          doc.landing?.subtitle ||
+          ""
       }
     });
 
@@ -692,6 +941,7 @@ app.put("/api/admin/content", requireAdmin, async (req, res) => {
         $set: {
           heroTitle,
           heroSubtitle,
+
           landing: {
             title: heroTitle,
             subtitle: heroSubtitle
@@ -723,7 +973,6 @@ app.put("/api/admin/content", requireAdmin, async (req, res) => {
 
 // ============================================
 // ADMIN BANNERS
-// Compatible with existing admin.js
 // ============================================
 
 app.get("/api/admin/banners", requireAdmin, async (req, res) => {
@@ -732,7 +981,10 @@ app.get("/api/admin/banners", requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({ success: true, banners });
+    res.json({
+      success: true,
+      banners
+    });
 
   } catch (error) {
     console.error(error);
@@ -746,19 +998,23 @@ app.get("/api/admin/banners", requireAdmin, async (req, res) => {
 
 app.post("/api/admin/banners", requireAdmin, async (req, res) => {
   try {
-    const imageUrl = validUrl(req.body.imageUrl || "");
+    const imageUrl = clean(req.body.imageUrl, 500);
     const link = validUrl(req.body.link || "");
 
-    if (imageUrl === null || link === null) {
+    if (!imageUrl || link === null) {
       return res.status(400).json({
         success: false,
-        message: "সঠিক HTTP/HTTPS URL দিন।"
+        message: "ব্যানারের ছবি অথবা সঠিক লিংক দিন।"
       });
     }
 
     const position = clean(req.body.position, 40);
 
-    if (!["landing_top", "landing_middle", "dashboard_home"].includes(position)) {
+    if (![
+      "landing_top",
+      "landing_middle",
+      "dashboard_home"
+    ].includes(position)) {
       return res.status(400).json({
         success: false,
         message: "সঠিক Banner Position নির্বাচন করুন।"
@@ -768,11 +1024,14 @@ app.post("/api/admin/banners", requireAdmin, async (req, res) => {
     const banner = await Banner.create({
       title: clean(req.body.title, 100),
       description: clean(req.body.description, 300),
+
       imageUrl,
       link,
       linkUrl: link,
+
       position,
       slot: position,
+
       enabled: req.body.enabled === true
     });
 
@@ -793,26 +1052,30 @@ app.post("/api/admin/banners", requireAdmin, async (req, res) => {
 
 app.put("/api/admin/banners/:id", requireAdmin, async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!validObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
         message: "Banner ID সঠিক নয়।"
       });
     }
 
-    const imageUrl = validUrl(req.body.imageUrl || "");
+    const imageUrl = clean(req.body.imageUrl, 500);
     const link = validUrl(req.body.link || "");
 
-    if (imageUrl === null || link === null) {
+    if (!imageUrl || link === null) {
       return res.status(400).json({
         success: false,
-        message: "সঠিক HTTP/HTTPS URL দিন।"
+        message: "ব্যানারের ছবি অথবা সঠিক লিংক দিন।"
       });
     }
 
     const position = clean(req.body.position, 40);
 
-    if (!["landing_top", "landing_middle", "dashboard_home"].includes(position)) {
+    if (![
+      "landing_top",
+      "landing_middle",
+      "dashboard_home"
+    ].includes(position)) {
       return res.status(400).json({
         success: false,
         message: "সঠিক Banner Position নির্বাচন করুন।"
@@ -825,15 +1088,21 @@ app.put("/api/admin/banners/:id", requireAdmin, async (req, res) => {
         $set: {
           title: clean(req.body.title, 100),
           description: clean(req.body.description, 300),
+
           imageUrl,
           link,
           linkUrl: link,
+
           position,
           slot: position,
+
           enabled: req.body.enabled === true
         }
       },
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!banner) {
@@ -843,7 +1112,10 @@ app.put("/api/admin/banners/:id", requireAdmin, async (req, res) => {
       });
     }
 
-    res.json({ success: true, banner });
+    res.json({
+      success: true,
+      banner
+    });
 
   } catch (error) {
     console.error(error);
@@ -857,7 +1129,7 @@ app.put("/api/admin/banners/:id", requireAdmin, async (req, res) => {
 
 app.delete("/api/admin/banners/:id", requireAdmin, async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!validObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
         message: "Banner ID সঠিক নয়।"
@@ -880,7 +1152,6 @@ app.delete("/api/admin/banners/:id", requireAdmin, async (req, res) => {
 
 // ============================================
 // ADMIN SERVICES
-// Existing records are retained.
 // ============================================
 
 app.get("/api/admin/services", requireAdmin, async (req, res) => {
@@ -889,7 +1160,10 @@ app.get("/api/admin/services", requireAdmin, async (req, res) => {
       .sort({ order: 1, createdAt: 1 })
       .lean();
 
-    res.json({ success: true, services });
+    res.json({
+      success: true,
+      services
+    });
 
   } catch (error) {
     console.error(error);
@@ -913,7 +1187,11 @@ app.post("/api/admin/services", requireAdmin, async (req, res) => {
     }
 
     const service = await Service.create({
-      key: makeKey(name) + "-" + crypto.randomBytes(3).toString("hex"),
+      key:
+        makeKey(name) +
+        "-" +
+        crypto.randomBytes(3).toString("hex"),
+
       name,
       description: clean(req.body.description, 250),
       icon: clean(req.body.icon || "◇", 8),
@@ -937,7 +1215,7 @@ app.post("/api/admin/services", requireAdmin, async (req, res) => {
 
 app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!validObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
         message: "Service ID সঠিক নয়।"
@@ -961,7 +1239,10 @@ app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
     const service = await Service.findByIdAndUpdate(
       req.params.id,
       { $set: update },
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!service) {
@@ -971,7 +1252,10 @@ app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
       });
     }
 
-    res.json({ success: true, service });
+    res.json({
+      success: true,
+      service
+    });
 
   } catch (error) {
     console.error(error);
@@ -985,7 +1269,7 @@ app.put("/api/admin/services/:id", requireAdmin, async (req, res) => {
 
 app.delete("/api/admin/services/:id", requireAdmin, async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
+    if (!validObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
         message: "Service ID সঠিক নয়।"
@@ -1013,13 +1297,14 @@ app.delete("/api/admin/services/:id", requireAdmin, async (req, res) => {
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
   try {
     const users = await User.find()
-      .select("name phone email createdAt")
+      .select("name phone email createdAt lastSeen")
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
 
     res.json({
       success: true,
+
       users: users.map(user => ({
         ...user,
         email: user.phone || user.email,
@@ -1045,9 +1330,11 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "RS PAY",
-    database: mongoose.connection.readyState === 1
-      ? "connected"
-      : "disconnected"
+
+    database:
+      mongoose.connection.readyState === 1
+        ? "connected"
+        : "disconnected"
   });
 });
 
@@ -1058,7 +1345,9 @@ app.get("/health", (req, res) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(
+    path.join(__dirname, "public", "index.html")
+  );
 });
 
 // ============================================
@@ -1068,9 +1357,13 @@ app.get("*", (req, res) => {
 app.use((err, req, res, next) => {
   console.error("Server error:", err);
 
-  res.status(500).json({
+  const status = err.status || 500;
+
+  res.status(status).json({
     success: false,
-    message: "সার্ভারে সমস্যা হয়েছে।"
+    message: status === 413
+      ? "আপলোডের ফাইলটি অনেক বড়।"
+      : "সার্ভারে সমস্যা হয়েছে।"
   });
 });
 
@@ -1084,8 +1377,10 @@ async function startServer() {
       throw new Error("MONGODB_URI is missing");
     }
 
-    if (!process.env.ADMIN_PASSWORD ||
-        process.env.ADMIN_PASSWORD.length < 12) {
+    if (
+      !process.env.ADMIN_PASSWORD ||
+      process.env.ADMIN_PASSWORD.length < 12
+    ) {
       throw new Error(
         "ADMIN_PASSWORD must contain at least 12 characters"
       );
@@ -1098,11 +1393,17 @@ async function startServer() {
       console.log("RS PAY SERVER STARTED");
       console.log("PORT:", PORT);
       console.log("DATABASE: CONNECTED");
+      console.log("ADMIN API: READY");
+      console.log("IMAGE STORAGE: MONGODB");
       console.log("================================");
     });
 
   } catch (error) {
-    console.error("RS PAY STARTUP ERROR:", error.message);
+    console.error(
+      "RS PAY STARTUP ERROR:",
+      error.message
+    );
+
     process.exit(1);
   }
 }
