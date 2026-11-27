@@ -1,0 +1,18 @@
+body { display: grid; place-items: center; padding: 24px 0; overflow-x: hidden; position: relative; }
+.orb { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; }
+.o1 { width: 420px; height: 420px; background: var(--brand); opacity: .5; top: -120px; left: -100px; }
+.o2 { width: 340px; height: 340px; background: var(--accent); opacity: .2; bottom: -100px; right: -80px; }
+.shell { position: relative; width: min(440px, 92vw); display: grid; gap: 18px; justify-items: center; }
+.top { margin-bottom: 4px; }
+.box { width: 100%; padding: 28px 24px; box-shadow: 0 40px 80px -40px var(--glow); }
+.box h1 { font-size: 26px; margin-bottom: 4px; }
+.box > p { margin-bottom: 18px; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; background: var(--input); border-radius: 14px; margin-bottom: 20px; }
+.tab { padding: 10px; border-radius: 10px; font-weight: 600; color: var(--muted); transition: .2s; }
+.tab.on { background: var(--grad); color: #fff; box-shadow: 0 6px 16px -6px var(--glow); }
+.pw { position: relative; }
+.pw input { padding-right: 46px; }
+.eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; font-size: 16px; opacity: .7; }
+.err { margin-top: 14px; padding: 11px 14px; border-radius: 12px; font-size: 14px; background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); }
+.back:hover { color: var(--accent); }
+@media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
