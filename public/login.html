@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>লগইন — RS PAY</title>
+  <meta name="theme-color" content="#0b0718">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <script src="/js/common.js"></script>
+</head>
+<body>
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <main class="shell">
+    <a href="/" class="brand top"><span class="logo-mark" data-logo>RS</span><span data-brand-name>RS PAY</span></a>
+
+    <section class="card box">
+      <h1 id="title">স্বাগতম 👋</h1>
+      <p class="muted" id="sub">আপনার অ্যাকাউন্টে লগইন করুন</p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab on" data-tab="login" role="tab">লগইন</button>
+        <button class="tab" data-tab="register" role="tab">রেজিস্ট্রেশন</button>
+      </div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="field"><label for="lp">মোবাইল নম্বর</label>
+          <input id="lp" name="phone" type="tel" inputmode="numeric" placeholder="01XXXXXXXXX" autocomplete="username" required></div>
+        <div class="field"><label for="lw">পাসওয়ার্ড</label>
+          <div class="pw"><input id="lw" name="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+          <button type="button" class="eye" data-eye>👁</button></div></div>
+        <button class="btn btn-primary btn-block" type="submit">লগইন করুন</button>
+      </form>
+
+      <form id="regForm" hidden autocomplete="on">
+        <div class="field"><label for="rn">আপনার নাম</label>
+          <input id="rn" name="name" placeholder="পুরো নাম" autocomplete="name" required minlength="2"></div>
+        <div class="field"><label for="rp">মোবাইল নম্বর</label>
+          <input id="rp" name="phone" type="tel" inputmode="numeric" placeholder="01XXXXXXXXX" autocomplete="username" required></div>
+        <div class="field"><label for="rw">পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label>
+          <div class="pw"><input id="rw" name="password" type="password" placeholder="••••••••" autocomplete="new-password" required minlength="6">
+          <button type="button" class="eye" data-eye>👁</button></div></div>
+        <div class="row2">
+          <div class="field"><label for="re">ইমেইল (ঐচ্ছিক)</label>
+            <input id="re" name="email" type="email" placeholder="you@mail.com" autocomplete="email"></div>
+          <div class="field"><label for="rr">রেফার কোড (ঐচ্ছিক)</label>
+            <input id="rr" name="ref" placeholder="RSXXXXXX" maxlength="12"></div>
+        </div>
+        <button class="btn btn-gold btn-block" type="submit">অ্যাকাউন্ট খুলুন</button>
+      </form>
+
+      <p class="err" id="err" role="alert" hidden></p>
+    </section>
+
+    <a href="/" class="muted small back">← হোমপেজে ফিরে যান</a>
+  </main>
+  <script src="/js/login.js"></script>
+</body>
+        </html>
