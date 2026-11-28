@@ -5,12 +5,12 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const {
-  User, Package, Service, Order, Deposit, WalletTx, credit, debit
+  User, Package, Service, Game, Order, Deposit, WalletTx, Media, credit, debit, payCashback
 } = require("../lib/models");
 const { getSite } = require("../lib/settings");
 const providers = require("../lib/providers");
 const {
-  wrap, money, str, normPhone, isPhone, isId, int, orderNo, httpError
+  wrap, money, str, normPhone, isPhone, isId, int, orderNo, httpError, hex
 } = require("../lib/util");
 
 const limiter = (max, minutes, message) => rateLimit({
@@ -35,6 +35,8 @@ const publicUser = (u) => ({
   email: u.email && !u.email.endsWith("@rspay.local") ? u.email : "",
   balance: u.balance || 0,
   referralCode: u.referralCode || "",
+  avatar: u.avatar || "",
+  themeColor: u.themeColor || "",
   createdAt: u.createdAt
 });
 
@@ -138,12 +140,27 @@ router.put("/me", requireAuth, wrap(async (req, res) => {
   const cur = await User.findById(req.session.userId);
   if (!email) email = cur.phone + "@rspay.local";
   try {
-    const u = await User.findByIdAndUpdate(req.session.userId, { name, email }, { new: true });
+    const set = { name, email };
+    const tc = str(req.body.themeColor, 7);
+    if (req.body.themeColor !== undefined) set.themeColor = tc ? hex(tc, "") : "";
+    if (req.body.avatar !== undefined) set.avatar = isId(req.body.avatar) ? String(req.body.avatar) : "";
+    const u = await User.findByIdAndUpdate(req.session.userId, set, { new: true });
     res.json({ user: publicUser(u) });
   } catch (e) {
     if (e.code === 11000) throw httpError(409, "এই ইমেইল আগেই ব্যবহার হয়েছে");
     throw e;
   }
+}));
+
+// Profile photo (small image, stored in MongoDB like other media)
+router.post("/me/avatar", requireAuth, orderLimiter, wrap(async (req, res) => {
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String((req.body || {}).dataUrl || ""));
+  if (!m) throw httpError(400, "শুধু PNG, JPG বা WEBP ছবি দিন");
+  const buf = Buffer.from(m[2], "base64");
+  if (buf.length > 400 * 1024) throw httpError(413, "ছবি ৪০০ KB এর কম হতে হবে");
+  const doc = await Media.create({ contentType: m[1], data: buf, size: buf.length });
+  const u = await User.findByIdAndUpdate(req.session.userId, { avatar: String(doc._id) }, { new: true });
+  res.json({ user: publicUser(u) });
 }));
 
 router.put("/me/password", requireAuth, authLimiter, wrap(async (req, res) => {
@@ -174,7 +191,7 @@ router.post("/orders", requireAuth, orderLimiter, wrap(async (req, res) => {
   const b = req.body || {};
   const ops = site.operators.filter((o) => o.active).map((o) => o.id);
   let { type } = b;
-  let amount = 0, fee = 0, title = "", target = "", code = "", operator = "";
+  let amount = 0, fee = 0, title = "", target = "", code = "", operator = "", cashback = 0;
   const meta = {};
 
   if (type === "recharge") {
@@ -195,13 +212,21 @@ router.post("/orders", requireAuth, orderLimiter, wrap(async (req, res) => {
     if (!pkg) throw httpError(404, "প্যাকেজটি পাওয়া যায়নি");
     if ((type === "freefire") !== (pkg.type === "freefire")) throw httpError(400, "প্যাকেজ মিলছে না");
     if (type === "freefire") {
+      const game = isId(pkg.gameId) ? await Game.findOne({ _id: pkg.gameId, active: true }).lean() : null;
+      if (!game) throw httpError(404, "গেমটি এখন চালু নেই");
       target = str(b.target, 20);
-      if (!/^\d{5,15}$/.test(target)) throw httpError(400, "সঠিক Free Fire UID দিন");
+      if (!/^\d{5,15}$/.test(target)) throw httpError(400, "সঠিক " + game.idLabel + " দিন");
+      meta.game = game.name;
+      meta.gameKey = game.key;
+      pkg.title = game.name + " — " + pkg.title;
     } else {
       target = normPhone(b.target);
       if (!isPhone(target)) throw httpError(400, "সঠিক মোবাইল নম্বর দিন");
     }
     amount = pkg.price;
+    if (pkg.cashbackType === "fixed") cashback = Math.min(pkg.cashbackValue, pkg.price);
+    else if (pkg.cashbackType === "percent") cashback = Math.floor((pkg.price * Math.min(pkg.cashbackValue, 100))) / 100;
+    cashback = money(cashback);
     title = pkg.title;
     code = pkg.code;
     operator = pkg.operator;
@@ -238,7 +263,7 @@ router.post("/orders", requireAuth, orderLimiter, wrap(async (req, res) => {
   try {
     order = await Order.create({
       orderNo: no, user: req.session.userId, type, title, operator, target,
-      amount, fee, total, code, meta
+      amount, fee, total, code, meta, cashback
     });
   } catch (e) {
     await credit(req.session.userId, total, "refund", no, "Order create failed");
@@ -261,6 +286,7 @@ router.post("/orders", requireAuth, orderLimiter, wrap(async (req, res) => {
       { status: "success", note: result.message, providerRef: result.ref },
       { new: true }
     ) || order;
+    order = await payCashback(order);
   } else {
     order.providerRef = result.ref;
     order.note = result.message;
