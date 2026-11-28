@@ -7,7 +7,7 @@
 
   const NAV = [
     ["dashboard", "📊", "ড্যাশবোর্ড"], ["orders", "📋", "অর্ডার"], ["deposits", "⬇️", "ডিপোজিট"], ["users", "👥", "ইউজার"],
-    ["packages", "📦", "প্যাকেজ"], ["services", "🧾", "বিল সার্ভিস"], ["banners", "🖼️", "ব্যানার"], ["settings", "🎨", "সাইট সেটিংস"]
+    ["packages", "📦", "প্যাকেজ"], ["games", "🎮", "গেমস"], ["categories", "🧩", "হোম আইকন"], ["services", "🧾", "বিল সার্ভিস"], ["banners", "🖼️", "ব্যানার"], ["settings", "🎨", "সাইট সেটিংস"]
   ];
   const TYPE = { internet: "ডাটা", minute: "মিনিট", combo: "কমবো", freefire: "ফ্রি ফায়ার" };
   const OTYPE = { recharge: "রিচার্জ", package: "প্যাকেজ", freefire: "ডায়মন্ড", bill: "বিল" };
@@ -66,7 +66,7 @@
   function setBadge(k, n) { const el = document.querySelector(`[data-badge="${k}"]`); if (el) { el.hidden = !n; el.textContent = n; } }
 
   // ================= router =================
-  const pages = { dashboard, orders, deposits, users, packages, services, banners, settings };
+  const pages = { dashboard, orders, deposits, users, packages, games, categories, services, banners, settings };
   async function route() {
     const k = (location.hash.replace(/^#\/?/, "") || "dashboard").split("?")[0];
     const key = pages[k] ? k : "dashboard";
@@ -113,19 +113,38 @@
     return out;
   }
 
-  function bindUploads(root) {
-    root.querySelectorAll("[data-up]").forEach((inp) => inp.addEventListener("change", () => {
-      const f = inp.files[0]; if (!f) return;
-      const rd = new FileReader();
-      rd.onload = async () => {
-        try {
-          const r = await api("/api/admin/media", { method: "POST", body: { dataUrl: rd.result } });
-          root.querySelector(`[data-k="${inp.dataset.up}"]`).value = r.id;
-          root.querySelector(`[data-pv="${inp.dataset.up}"]`).innerHTML = `<img src="${r.url}" alt="">`;
-          toast("আপলোড হয়েছে", "ok");
-        } catch (e) { toast(e.message, "err"); }
+  // big phone photos are shrunk in the browser first, so uploads never fail on size
+  function toDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("ছবি পড়া যায়নি"));
+      fr.onload = () => {
+        if (file.size <= 1100 * 1024 && /^image\/(png|jpeg|webp)$/.test(file.type)) return resolve(fr.result);
+        const img = new Image();
+        img.onerror = () => reject(new Error("ছবি পড়া যায়নি"));
+        img.onload = () => {
+          const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = fr.result;
       };
-      rd.readAsDataURL(f);
+      fr.readAsDataURL(file);
+    });
+  }
+  async function uploadFile(file) { return api("/api/admin/media", { method: "POST", body: { dataUrl: await toDataUrl(file) } }); }
+
+  function bindUploads(root) {
+    root.querySelectorAll("[data-up]").forEach((inp) => inp.addEventListener("change", async () => {
+      const f = inp.files[0]; if (!f) return;
+      try {
+        const r = await uploadFile(f);
+        root.querySelector(`[data-k="${inp.dataset.up}"]`).value = r.id;
+        root.querySelector(`[data-pv="${inp.dataset.up}"]`).innerHTML = `<img src="${r.url}" alt="">`;
+        toast("আপলোড হয়েছে", "ok");
+      } catch (e) { toast(e.message, "err"); }
     }));
     root.querySelectorAll("[data-clr]").forEach((b) => b.addEventListener("click", () => {
       root.querySelector(`[data-k="${b.dataset.clr}"]`).value = "";
@@ -283,15 +302,22 @@
   async function packages() {
     const site = await ensureSite();
     const opts = [["", "— কোনো অপারেটর নয় —"], ...site.operators.map((o) => [o.id, o.name])];
+    const games = (await api("/api/admin/games")).items;
+    const gameOpts = [["", "— গেম নয় —"], ...games.map((g) => [g._id, g.name])];
     const fields = [
       { k: "type", label: "ধরন", type: "select", options: Object.entries(TYPE) },
-      { k: "operator", label: "অপারেটর", type: "select", options: opts },
+      { k: "operator", label: "অপারেটর (ডাটা/মিনিটের জন্য)", type: "select", options: opts },
+      { k: "gameId", label: "গেম (শুধু ‘ফ্রি ফায়ার/গেম’ ধরনের জন্য)", type: "select", options: gameOpts, full: true },
+      { k: "image", label: "ছবি (ঐচ্ছিক)", type: "image", full: true },
       { k: "title", label: "টাইটেল", full: true, ph: "যেমন: ১২ GB / ১১০ 💎 ডায়মন্ড" },
       { k: "detail", label: "বিবরণ (ঐচ্ছিক)", full: true },
       { k: "validity", label: "মেয়াদ", ph: "৩০ দিন" },
       { k: "tag", label: "ট্যাগ", ph: "Hot / Popular" },
       { k: "price", label: "বিক্রয় মূল্য (৳)", type: "number" },
       { k: "oldPrice", label: "আগের দাম (ঐচ্ছিক)", type: "number" },
+      { k: "hot", label: "🔥 HOT ট্যাগ দেখান", type: "check" },
+      { k: "cashbackType", label: "ক্যাশব্যাক ধরন", type: "select", options: [["none", "ক্যাশব্যাক নেই"], ["fixed", "নির্দিষ্ট টাকা (৳)"], ["percent", "শতাংশ (%)"]] },
+      { k: "cashbackValue", label: "ক্যাশব্যাক পরিমাণ", type: "number", step: "0.01", hint: "যেমন ৫০ (টাকা) অথবা ১০ (শতাংশ)" },
       { k: "code", label: "প্রোভাইডার কোড", hint: "API অর্ডারে এই কোড যাবে" },
       { k: "sort", label: "সিরিয়াল", type: "number" },
       { k: "active", label: "চালু আছে", type: "check" }
@@ -303,13 +329,13 @@
     const draw = () => {
       const list = items.filter((p) => filter === "all" || p.type === filter);
       $("pb").innerHTML = list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>প্যাকেজ</th><th>ধরন</th><th>অপারেটর</th><th>দাম</th><th>স্ট্যাটাস</th><th></th></tr></thead><tbody>
-        ${list.map((p) => `<tr><td><b>${esc(p.title)}</b><small>${esc([p.validity, p.tag].filter(Boolean).join(" · "))}</small></td><td>${TYPE[p.type]}</td><td>${esc((site.operators.find((o) => o.id === p.operator) || {}).name || "—")}</td><td><b>${taka(p.price)}</b></td><td>${p.active ? '<span class="badge ok">চালু</span>' : '<span class="badge">বন্ধ</span>'}</td>
+        ${list.map((p) => `<tr><td>${p.image ? `<img class="thumb" src="/api/media/${esc(p.image)}" alt="">` : ""}<b>${esc(p.title)}</b>${p.hot ? " 🔥" : ""}<small>${esc([p.validity, p.tag, (games.find((g) => g._id === p.gameId) || {}).name].filter(Boolean).join(" · "))}</small></td><td>${TYPE[p.type]}</td><td>${esc((site.operators.find((o) => o.id === p.operator) || {}).name || "—")}</td><td><b>${taka(p.price)}</b>${p.cashbackType !== "none" && p.cashbackValue ? `<small>ক্যাশব্যাক ${p.cashbackType === "fixed" ? taka(p.cashbackValue) : p.cashbackValue + "%"}</small>` : ""}</td><td>${p.active ? '<span class="badge ok">চালু</span>' : '<span class="badge">বন্ধ</span>'}</td>
         <td><div class="acts"><button class="btn btn-ghost btn-sm" data-e="${p._id}">এডিট</button><button class="btn btn-danger btn-sm" data-x="${p._id}">ডিলিট</button></div></td></tr>`).join("")}</tbody></table></div>` : empty("কোনো প্যাকেজ নেই");
       $("pb").querySelectorAll("[data-e]").forEach((b) => b.addEventListener("click", () => { const p = items.find((x) => x._id === b.dataset.e); formSheet("প্যাকেজ এডিট", fields, p, async (v) => { await api("/api/admin/packages/" + p._id, { method: "PUT", body: v }); toast("সেভ হয়েছে", "ok"); load(); }); }));
       $("pb").querySelectorAll("[data-x]").forEach((b) => b.addEventListener("click", () => confirmSheet("প্যাকেজ ডিলিট করবেন?", "এটি ফিরিয়ে আনা যাবে না। অস্থায়ী বন্ধ করতে এডিট করে ‘চালু আছে’ বন্ধ করুন।", "ডিলিট", async () => { await api("/api/admin/packages/" + b.dataset.x, { method: "DELETE", body: {} }); toast("ডিলিট হয়েছে", "ok"); load(); }, true)));
     };
     const load = async () => { items = (await api("/api/admin/packages")).items; draw(); };
-    $("addP").addEventListener("click", () => formSheet("নতুন প্যাকেজ", fields, { type: filter === "all" ? "internet" : filter, active: true, sort: items.length }, async (v) => { await api("/api/admin/packages", { method: "POST", body: v }); toast("যোগ হয়েছে", "ok"); load(); }));
+    $("addP").addEventListener("click", () => formSheet("নতুন প্যাকেজ", fields, { type: filter === "all" ? "internet" : filter, active: true, cashbackType: "none", cashbackValue: 0, sort: items.length }, async (v) => { await api("/api/admin/packages", { method: "POST", body: v }); toast("যোগ হয়েছে", "ok"); load(); }));
     view.querySelector(".toolbar").addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (!b) return; filter = b.dataset.f; view.querySelectorAll("[data-f]").forEach((x) => x.classList.toggle("on", x === b)); draw(); });
     await load();
   }
@@ -320,6 +346,7 @@
       { k: "nameEn", label: "নাম (English)", ph: "Electricity" },
       { k: "key", label: "কী (ইংরেজি, ইউনিক)", ph: "electricity", hint: "a-z, 0-9, - _" },
       { k: "icon", label: "আইকন (ইমোজি)", ph: "💡" },
+      { k: "image", label: "ছবি (ঐচ্ছিক — দিলে ইমোজির জায়গায় দেখাবে)", type: "image", full: true },
       { k: "accountLabel", label: "ইনপুটের লেবেল", full: true, ph: "মিটার / অ্যাকাউন্ট নম্বর" },
       { k: "min", label: "সর্বনিম্ন (৳)", type: "number" },
       { k: "max", label: "সর্বোচ্চ (৳)", type: "number" },
@@ -341,6 +368,57 @@
     $("addS").addEventListener("click", () => formSheet("নতুন সার্ভিস", fields, { icon: "💡", min: 10, max: 50000, feePercent: 0, active: true, sort: items.length }, async (v) => { await api("/api/admin/services", { method: "POST", body: v }); toast("যোগ হয়েছে", "ok"); load(); }));
     await load();
   }
+
+  // ---- generic list page (games, home icons) ----
+  async function simpleCrud(cfg) {
+    view.innerHTML = `<div class="toolbar"><button class="btn btn-primary btn-sm" id="addX">+ ${esc(cfg.add)}</button></div>${cfg.help ? `<p class="muted small" style="margin-bottom:12px">${cfg.help}</p>` : ""}<div id="xb">${skeleton(4)}</div>`;
+    let items = [];
+    const draw = () => {
+      $("xb").innerHTML = items.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(cfg.head)}</th><th>${esc(cfg.col2)}</th><th>স্ট্যাটাস</th><th></th></tr></thead><tbody>
+        ${items.map((x) => `<tr><td>${x.image ? `<img class="thumb" src="/api/media/${esc(x.image)}" alt="">` : `<span class="thumb em">${esc(x.icon)}</span>`}<b>${esc(cfg.name(x))}</b></td><td>${cfg.col2v(x)}</td><td>${x.active ? '<span class="badge ok">চালু</span>' : '<span class="badge">বন্ধ</span>'}</td>
+        <td><div class="acts"><button class="btn btn-ghost btn-sm" data-e="${x._id}">এডিট</button><button class="btn btn-danger btn-sm" data-x="${x._id}">ডিলিট</button></div></td></tr>`).join("")}</tbody></table></div>` : empty("কিছু নেই");
+      $("xb").querySelectorAll("[data-e]").forEach((b) => b.addEventListener("click", () => { const x = items.find((i) => i._id === b.dataset.e); formSheet(cfg.add + " — এডিট", cfg.fields, x, async (v) => { await api(cfg.path + "/" + x._id, { method: "PUT", body: v }); toast("সেভ হয়েছে", "ok"); load(); }); }));
+      $("xb").querySelectorAll("[data-x]").forEach((b) => b.addEventListener("click", () => confirmSheet("ডিলিট করবেন?", cfg.delText || "এটি ফিরিয়ে আনা যাবে না।", "ডিলিট", async () => { await api(cfg.path + "/" + b.dataset.x, { method: "DELETE", body: {} }); toast("ডিলিট হয়েছে", "ok"); load(); }, true)));
+    };
+    const load = async () => { items = (await api(cfg.path)).items; draw(); };
+    $("addX").addEventListener("click", () => formSheet(cfg.add, cfg.fields, { ...cfg.defaults, sort: items.length }, async (v) => { await api(cfg.path, { method: "POST", body: v }); toast("যোগ হয়েছে", "ok"); load(); }));
+    await load();
+  }
+
+  function games() { return simpleCrud({
+    path: "/api/admin/games", add: "নতুন গেম", head: "গেম", col2: "ID ও কারেন্সি",
+    help: "ইউজার ‘গেম টপআপ’-এ চাপলে এই গেমগুলো দেখবে। গেম বেছে নিলে ওই গেমের প্যাকেজ দেখাবে। প্যাকেজ যোগ করতে ‘প্যাকেজ’ পেজে গিয়ে ধরন ‘ফ্রি ফায়ার’ ও এই গেম নির্বাচন করুন।",
+    name: (g) => g.name, col2v: (g) => `${esc(g.idLabel)}<small>${esc(g.currency)}</small>`,
+    defaults: { icon: "🎮", currency: "ডায়মন্ড", idLabel: "Player ID", active: true },
+    delText: "গেম ডিলিট করলে এর প্যাকেজ আর দেখাবে না।",
+    fields: [
+      { k: "name", label: "গেমের নাম", ph: "Free Fire" },
+      { k: "key", label: "কী (ইংরেজি, ইউনিক)", ph: "freefire", hint: "a-z, 0-9, - _" },
+      { k: "image", label: "গেমের ছবি / লোগো", type: "image", full: true },
+      { k: "icon", label: "ছবি না থাকলে ইমোজি", ph: "🎮" },
+      { k: "currency", label: "কারেন্সির নাম", ph: "ডায়মন্ড / UC" },
+      { k: "idLabel", label: "ইউজারের ID-র নাম", ph: "Free Fire UID", full: true },
+      { k: "sort", label: "সিরিয়াল", type: "number" },
+      { k: "active", label: "চালু আছে", type: "check" }
+    ]
+  }); }
+
+  function categories() { return simpleCrud({
+    path: "/api/admin/categories", add: "নতুন আইকন", head: "আইকন", col2: "লিংক",
+    help: "ইউজার অ্যাপের হোম স্ক্রিনের আইকন গ্রিড। ছবি দিলে ছবি দেখাবে, না দিলে ইমোজি। ‘ল্যান্ডিং পেজে দেখান’ চালু করলে বাইরের পেজের সার্ভিস সেকশনেও আসবে।",
+    name: (c) => c.title, col2v: (c) => `<code>${esc(c.link)}</code>${c.landing ? "<small>ল্যান্ডিং পেজেও দেখায়</small>" : ""}`,
+    defaults: { icon: "⭐", link: "#/recharge", landing: false, active: true },
+    fields: [
+      { k: "title", label: "নাম", ph: "রিচার্জ" },
+      { k: "icon", label: "ইমোজি", ph: "📱" },
+      { k: "image", label: "ছবি (ঐচ্ছিক)", type: "image", full: true },
+      { k: "link", label: "কোথায় যাবে", type: "select", full: true, options: [["#/recharge", "মোবাইল রিচার্জ"], ["#/packs", "ডাটা / মিনিট প্যাকেজ"], ["#/freefire", "গেম টপআপ"], ["#/bills", "বিল পে"], ["#/wallet?add", "টাকা যোগ"], ["#/wallet", "ওয়ালেট হিস্ট্রি"], ["#/orders", "অর্ডার"], ["#/profile", "প্রোফাইল / রেফার"]] },
+      { k: "color", label: "আইকনের ব্যাকগ্রাউন্ড কালার (ঐচ্ছিক)", ph: "#7c3aed", hint: "খালি রাখলে ডিফল্ট কালার", full: true },
+      { k: "landing", label: "ল্যান্ডিং পেজে দেখান", type: "check" },
+      { k: "sort", label: "সিরিয়াল", type: "number" },
+      { k: "active", label: "চালু আছে", type: "check" }
+    ]
+  }); }
 
   async function banners() {
     const fields = [
@@ -406,6 +484,11 @@
       layout: (f) => `<div class="g2"><input data-f="value" placeholder="মান (যেমন 24/7)" value="${esc(f.value)}"><input data-f="label" placeholder="লেবেল" value="${esc(f.label)}"></div>`,
       read: (r) => ({ value: iv(r, "value").value, label: iv(r, "label").value })
     }, 4);
+    const stepsE = listEditor("stepsl", s.steps, {
+      blank: { title: "", text: "" },
+      layout: (f) => `<input data-f="title" placeholder="ধাপের নাম" value="${esc(f.title)}"><textarea data-f="text" placeholder="বিবরণ">${esc(f.text)}</textarea>`,
+      read: (r) => ({ title: iv(r, "title").value, text: iv(r, "text").value })
+    }, 6);
     const methods = listEditor("methods", s.payment.methods, {
       blank: { name: "", number: "", kind: "Personal", note: "", active: true },
       layout: (m) => `<div class="g2"><input data-f="name" placeholder="নাম (bKash)" value="${esc(m.name)}"><input data-f="number" placeholder="নম্বর" value="${esc(m.number)}"></div><div class="g2"><input data-f="kind" placeholder="Personal / Agent / Merchant" value="${esc(m.kind)}"><input data-f="note" placeholder="নির্দেশনা" value="${esc(m.note)}"></div><label class="check"><input type="checkbox" data-f="active" ${m.active ? "checked" : ""}>চালু আছে</label>`,
@@ -413,8 +496,8 @@
     }, 8);
     const opsE = listEditor("opsl", s.operators, {
       blank: { id: "", name: "", short: "", color: "#888888", active: true },
-      layout: (o) => `<div class="g2"><input data-f="id" placeholder="আইডি (gp, robi…)" value="${esc(o.id)}"><input data-f="name" placeholder="নাম" value="${esc(o.name)}"></div><div class="g2"><input data-f="short" placeholder="সংক্ষিপ্ত নাম" value="${esc(o.short)}"><input data-f="color" type="color" value="${esc(o.color)}" style="height:42px;padding:3px"></div><label class="check"><input type="checkbox" data-f="active" ${o.active ? "checked" : ""}>চালু আছে</label>`,
-      read: (r) => ({ id: iv(r, "id").value, name: iv(r, "name").value, short: iv(r, "short").value, color: iv(r, "color").value, active: iv(r, "active").checked })
+      layout: (o) => `<div class="upl"><div class="pv" data-rpv>${o.image ? `<img src="/api/media/${esc(o.image)}" alt="">` : "লোগো"}</div><input type="file" accept="image/png,image/jpeg,image/webp" data-upr><input type="hidden" data-f="image" value="${esc(o.image || "")}"></div><div class="g2"><input data-f="id" placeholder="আইডি (gp, robi…)" value="${esc(o.id)}"><input data-f="name" placeholder="নাম" value="${esc(o.name)}"></div><div class="g2"><input data-f="short" placeholder="সংক্ষিপ্ত নাম" value="${esc(o.short)}"><input data-f="color" type="color" value="${esc(o.color)}" style="height:42px;padding:3px"></div><label class="check"><input type="checkbox" data-f="active" ${o.active ? "checked" : ""}>চালু আছে</label>`,
+      read: (r) => ({ id: iv(r, "id").value, name: iv(r, "name").value, short: iv(r, "short").value, image: iv(r, "image").value, color: iv(r, "color").value, active: iv(r, "active").checked })
     }, 10);
 
     const THEMES = [["royal", "Royal Dark", "linear-gradient(135deg,#0b0718,#3b1a8a)"], ["aurora", "Aurora Teal", "linear-gradient(135deg,#04131a,#0e7490)"], ["light", "Clean Light", "linear-gradient(135deg,#f4f3fb,#c4b5fd)"]];
@@ -442,6 +525,14 @@
         <div class="card sec"><h3>হিরো সেকশন</h3><div class="form-grid">
           ${tx("hBadge", "ব্যাজ", s.hero.badge)}${tx("hTitle", "হেডলাইন", s.hero.title)}
           ${ta("hSub", "সাবটাইটেল", s.hero.subtitle)}${tx("hC1", "প্রধান বাটন", s.hero.cta1)}${tx("hC2", "দ্বিতীয় বাটন", s.hero.cta2)}</div></div>
+        <div class="card sec"><h3>হিরো ব্যানার / ভিডিও <small>— হোমপেজের উপরের বড় অংশে দেখাবে</small></h3><div class="form-grid">
+          <div class="field"><label for="hmType">কী দেখাবেন</label><select id="hmType">${[["none", "কিছু না (ডিফল্ট ফোন ডিজাইন)"], ["image", "ব্যানার ছবি"], ["video", "ভিডিও"]].map(([k, l]) => `<option value="${k}" ${s.heroMedia.type === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+          <div class="field"><label>ছবি (ব্যানার বা ভিডিওর পোস্টার)</label><div class="upl"><div class="pv" data-pv="hmImg">${s.heroMedia.image ? `<img src="/api/media/${esc(s.heroMedia.image)}" alt="">` : "নেই"}</div><input type="file" accept="image/png,image/jpeg,image/webp" data-up="hmImg"><button type="button" class="btn btn-ghost btn-sm" data-clr="hmImg">মুছুন</button><input type="hidden" data-k="hmImg" value="${esc(s.heroMedia.image)}"></div></div>
+          ${tx("hmVid", "ভিডিও লিংক (https://)", s.heroMedia.videoUrl, 'placeholder="YouTube লিংক বা .mp4 লিংক"')}
+          <p class="hint full muted small">ভিডিওর জন্য YouTube লিংক (youtube.com / youtu.be) অথবা সরাসরি .mp4 ফাইলের https লিংক দিন।</p></div></div>
+        <div class="card sec"><h3>কোন সেকশন দেখাবেন</h3><div class="form-grid">
+          ${ck("secStats", "স্ট্যাটস", s.sections.stats)}${ck("secSvc", "সার্ভিস", s.sections.services)}${ck("secFeat", "সুবিধা সমূহ", s.sections.features)}${ck("secSteps", "৩ ধাপ", s.sections.steps)}${ck("secFaq", "প্রশ্নোত্তর", s.sections.faq)}</div></div>
+        <div class="card sec"><h3>শুরু করুন — ধাপ সমূহ <small>(সর্বোচ্চ ৬টি)</small></h3>${stepsE.html}</div>
         <div class="card sec"><h3>স্ট্যাটস <small>(সর্বোচ্চ ৪টি)</small></h3>${stats.html}</div>
         <div class="card sec"><h3>সুবিধা সমূহ <small>(সর্বোচ্চ ৮টি)</small></h3>${feats.html}</div>
         <div class="card sec"><h3>প্রশ্নোত্তর (FAQ)</h3>${faqs.html}</div>`,
@@ -472,7 +563,9 @@
         draft.maintenance = { active: c("mOn"), message: v("mTx") };
       } else if (tab === "land") {
         draft.hero = { badge: v("hBadge"), title: v("hTitle"), subtitle: v("hSub"), cta1: v("hC1"), cta2: v("hC2") };
-        draft.stats = stats.read(view); draft.features = feats.read(view); draft.faq = faqs.read(view);
+        draft.stats = stats.read(view); draft.features = feats.read(view); draft.faq = faqs.read(view); draft.steps = stepsE.read(view);
+        draft.heroMedia = { type: v("hmType"), image: view.querySelector('[data-k="hmImg"]').value, videoUrl: v("hmVid") };
+        draft.sections = { stats: c("secStats"), services: c("secSvc"), features: c("secFeat"), steps: c("secSteps"), faq: c("secFaq") };
       } else if (tab === "pay") {
         draft.payment = { minDeposit: v("dMin"), maxDeposit: v("dMax"), methods: methods.read(view) };
         draft.orders = { minRecharge: v("rMin"), maxRecharge: v("rMax") };
@@ -491,9 +584,17 @@
         <div class="savebar"><button class="btn btn-primary" id="saveAll">💾 সব পরিবর্তন সেভ করুন</button></div>`;
       view.querySelector(".set-tabs").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (!b || b.dataset.t === tab) return; collect(); Object.assign(s, draft); tab = b.dataset.t; paint(); });
       bindUploads(view);
-      if (tab === "land") { stats.bind(view); feats.bind(view); faqs.bind(view); }
+      if (tab === "land") { stats.bind(view); feats.bind(view); faqs.bind(view); stepsE.bind(view); }
       if (tab === "pay") methods.bind(view);
-      if (tab === "ops") opsE.bind(view);
+      if (tab === "ops") {
+        opsE.bind(view);
+        $("opsl").addEventListener("change", async (e) => {
+          const inp = e.target.closest("[data-upr]"); if (!inp || !inp.files[0]) return;
+          const row = inp.closest(".lrow");
+          try { const r = await uploadFile(inp.files[0]); iv(row, "image").value = r.id; row.querySelector("[data-rpv]").innerHTML = `<img src="${r.url}" alt="">`; toast("আপলোড হয়েছে", "ok"); }
+          catch (er) { toast(er.message, "err"); }
+        });
+      }
       if (tab === "theme") bindTheme();
       $("saveAll").addEventListener("click", save);
     };
