@@ -156,4 +156,55 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .dgrid { grid-template-columns: repeat(3, 1fr); }
   .bill-grid { grid-template-columns: repeat(3, 1fr); }
   #toasts { bottom: 30px; }
-       }
+}
+
+/* ---- extra motion & polish ---- */
+.wallet-card { animation: rise .5s ease both; }
+.wallet-card .shine { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%); transform: translateX(-120%); animation: shine 4.5s ease-in-out infinite; pointer-events: none; }
+@keyframes shine { 60%, 100% { transform: translateX(120%); } }
+.quick .q { animation: rise .5s ease both; }
+.quick .q:nth-child(1) { animation-delay: .05s; } .quick .q:nth-child(2) { animation-delay: .1s; }
+.quick .q:nth-child(3) { animation-delay: .15s; } .quick .q:nth-child(4) { animation-delay: .2s; }
+.quick .q:nth-child(5) { animation-delay: .25s; } .quick .q:nth-child(6) { animation-delay: .3s; }
+.quick .q:nth-child(7) { animation-delay: .35s; } .quick .q:nth-child(8) { animation-delay: .4s; }
+.q i { transition: transform .25s; } .q:hover i, .q:active i { transform: translateY(-3px) scale(1.1) rotate(-4deg); }
+.bn { animation: rise .5s ease both; }
+.pk, .dg, .bill, .item { animation: rise .4s ease both; }
+.bal-chip b { background: var(--grad-gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.admin-entry { text-align: center; margin-top: 26px; }
+.admin-entry button { font-size: 12px; color: var(--muted); padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); opacity: .8; }
+.admin-entry button:hover { color: var(--text); opacity: 1; }
+
+/* ---- images, cashback, games, personal colour ---- */
+img.vis { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+h3 img.vis { display: inline-block; width: 26px; height: 26px; border-radius: 8px; vertical-align: -6px; }
+.q i, .bill i { overflow: hidden; }
+.op-dot.img { background: var(--card); overflow: hidden; padding: 0; }
+.op-dot.img img { width: 100%; height: 100%; object-fit: cover; }
+.cb { display: inline-block; margin-top: 4px; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent); }
+.dg .cb { justify-self: center; }
+.tag.hot { background: linear-gradient(135deg, #ff5f2e, #ff2e63); color: #fff; animation: flame 1.4s ease-in-out infinite; }
+@keyframes flame { 50% { transform: scale(1.08); box-shadow: 0 0 14px rgba(255,80,60,.55); } }
+
+.back-link { display: inline-block; margin: 4px 0 12px; font-weight: 600; color: var(--accent); }
+.game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.game { display: grid; gap: 4px; justify-items: center; text-align: center; padding: 18px 10px 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); transition: transform .2s, border-color .2s, box-shadow .2s; animation: rise .45s ease both; }
+.game:hover { border-color: var(--brand); transform: translateY(-4px); box-shadow: 0 20px 36px -22px var(--glow); }
+.game:active { transform: scale(.97); }
+.game b { font-size: 16px; margin-top: 6px; } .game small { color: var(--muted); }
+.gimg { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; font-size: 40px; overflow: hidden; background: color-mix(in srgb, var(--brand) 20%, transparent); box-shadow: 0 12px 26px -14px var(--glow); }
+.game-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.game-head .gimg { width: 64px; height: 64px; font-size: 30px; border-radius: 20px; }
+.game-head h2 { font-size: 21px; }
+.dg .gem { width: 56px; height: 56px; margin: 0 auto 2px; display: grid; place-items: center; font-size: 34px; border-radius: 16px; overflow: hidden; }
+.dg .price s { color: var(--muted); font-weight: 500; font-size: 12px; }
+
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar.sm { width: 64px; height: 64px; margin: 0; font-size: 24px; flex: none; }
+.upl-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sw { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; box-shadow: 0 0 0 1px var(--line); transition: .15s; }
+.sw.on { border-color: var(--text); transform: scale(1.12); }
+.swatches input[type=color] { width: 38px; height: 38px; border: 0; padding: 0; border-radius: 50%; background: none; cursor: pointer; }
+@media (min-width: 960px) { .game-grid { grid-template-columns: repeat(4, 1fr); } }
