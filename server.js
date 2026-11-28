@@ -7,7 +7,7 @@ const MongoStore = require("connect-mongo");
 const helmet = require("helmet");
 
 const connectDatabase = require("./database");
-const { seedIfNeeded } = require("./lib/settings");
+const { seedIfNeeded, seedExtras } = require("./lib/settings");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +25,8 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
+      mediaSrc: ["'self'", "https:", "data:"],
+      frameSrc: ["https://www.youtube-nocookie.com"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"]
     }
@@ -83,7 +85,10 @@ const page = (file) => (req, res) => res.sendFile(path.join(pub, file));
 app.get("/login", page("login.html"));
 app.get("/app", page("app.html"));
 app.get("/admin", page("admin.html"));
-app.get("*", page("index.html"));
+app.get("*", (req, res, next) => {
+  if (/\.[a-z0-9]{2,5}$/i.test(req.path)) return res.status(404).send("File not found: " + req.path);
+  next();
+}, page("index.html"));
 
 // ---- errors ----
 app.use((err, req, res, next) => {
@@ -94,6 +99,7 @@ app.use((err, req, res, next) => {
 
 connectDatabase()
   .then(seedIfNeeded)
+  .then(seedExtras)
   .then(() => app.listen(PORT, () => console.log(`RS PAY running on port ${PORT}`)))
   .catch((err) => {
     console.error("Startup failed:", err.message);
