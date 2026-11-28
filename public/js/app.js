@@ -9,7 +9,7 @@
 
   const NAV = [
     ["home", "🏠", "হোম"], ["recharge", "📱", "রিচার্জ"], ["packs", "📦", "প্যাকেজ"],
-    ["freefire", "💎", "ডায়মন্ড"], ["bills", "🧾", "বিল পে"], ["wallet", "💰", "ওয়ালেট"],
+    ["freefire", "🎮", "গেম টপআপ"], ["bills", "🧾", "বিল পে"], ["wallet", "💰", "ওয়ালেট"],
     ["orders", "📋", "অর্ডার"], ["profile", "👤", "প্রোফাইল"]
   ];
   const TAB = ["home", "recharge", "packs", "freefire", "profile"];
@@ -20,7 +20,42 @@
 
   const ops = () => S.site.operators.filter((o) => o.active);
   const op = (id) => S.site.operators.find((o) => o.id === id);
-  const opDot = (id) => { const o = op(id); return o ? `<div class="op-dot" style="background:${esc(o.color)}">${esc((o.short || o.name).slice(0, 5))}</div>` : `<div class="op-dot" style="background:var(--brand)">•</div>`; };
+  const media = (id) => `/api/media/${esc(id)}`;
+  // image if the admin uploaded one, otherwise the emoji
+  const vis = (image, icon) => image ? `<img class="vis" src="${media(image)}" alt="" loading="lazy">` : esc(icon || "⭐");
+  const opDot = (id) => {
+    const o = op(id);
+    if (!o) return `<div class="op-dot" style="background:var(--brand)">•</div>`;
+    if (o.image) return `<div class="op-dot img"><img src="${media(o.image)}" alt=""></div>`;
+    return `<div class="op-dot" style="background:${esc(o.color)}">${esc((o.short || o.name).slice(0, 5))}</div>`;
+  };
+  const cbOf = (p) => {
+    if (p.cashbackType === "fixed") return Math.min(p.cashbackValue, p.price);
+    if (p.cashbackType === "percent") return Math.floor(p.price * Math.min(p.cashbackValue, 100)) / 100;
+    return 0;
+  };
+  const cbBadge = (p) => { const c = cbOf(p); return c > 0 ? `<span class="cb">💰 +${taka(c)} ক্যাশব্যাক</span>` : ""; };
+  const tagOf = (p) => (p.hot ? "🔥 HOT" : p.tag || "");
+  // shrink a phone photo before upload so it never hits the size limit
+  function shrink(file, max, quality) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("ছবি পড়া যায়নি"));
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("ছবি পড়া যায়নি"));
+        img.onload = () => {
+          const k = Math.min(1, max / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          resolve(c.toDataURL("image/jpeg", quality));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
   const validPhone = (p) => /^01[3-9]\d{8}$/.test(p);
   const cleanPhone = (v) => { let s = String(v).replace(/[^\d+]/g, ""); if (s.startsWith("+880")) s = "0" + s.slice(4); else if (s.startsWith("880")) s = "0" + s.slice(3); return s.slice(0, 11); };
   const skeleton = (n = 4) => `<div class="list">${'<div class="skeleton"></div>'.repeat(n)}</div>`;
@@ -31,7 +66,7 @@
   async function boot() {
     try {
       const [me, boot] = await Promise.all([api("/api/me"), api("/api/bootstrap")]);
-      S.me = me.user; S.site = boot.site; S.banners = boot.banners; S.services = boot.services;
+      S.me = me.user; S.site = boot.site; S.banners = boot.banners; S.services = boot.services; S.games = boot.games || []; S.cats = boot.categories || [];
     } catch (e) {
       if (e.status === 401) return (location.href = "/login");
       view.innerHTML = empty("📡", e.message);
@@ -39,6 +74,7 @@
     }
     setSite(S.site);
     document.title = S.site.brand.name;
+    applyMyColor();
     $("balTop").textContent = taka(S.me.balance);
 
     $("sideNav").innerHTML = NAV.map(([k, i, l]) => `<a href="#/${k}" data-nav="${k}"><i>${i}</i>${l}</a>`).join("");
@@ -57,6 +93,11 @@
     setInterval(() => api("/api/me").then((d) => setBal(d.user.balance)).catch(() => {}), 60000);
   }
 
+  function applyMyColor() {
+    if (S.me.themeColor) RS.applyTheme({ preset: S.site.theme.preset, brand: S.me.themeColor, accent: S.site.theme.accent });
+    else RS.applyTheme(S.site.theme);
+  }
+
   // ================= router =================
   const pages = { home, recharge, packs, freefire, bills, wallet, orders, profile };
   async function route() {
@@ -70,7 +111,7 @@
   }
 
   // ================= checkout =================
-  function checkout({ title, rows, amount, fee = 0, payload }) {
+  function checkout({ title, rows, amount, fee = 0, cashback = 0, payload }) {
     const total = amount + fee;
     const short = S.me.balance < total;
     sheet(`
@@ -80,6 +121,7 @@
         ${rows.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}
         ${fee ? `<div><span>পরিমাণ</span><b>${taka(amount)}</b></div><div><span>চার্জ</span><b>${taka(fee)}</b></div>` : ""}
         <div><span>মোট</span><b style="color:var(--accent);font-size:17px">${taka(total)}</b></div>
+        ${cashback > 0 ? `<div><span>ক্যাশব্যাক</span><b style="color:var(--ok)">+${taka(cashback)}</b></div>` : ""}
         <div><span>বর্তমান ব্যালেন্স</span><b>${taka(S.me.balance)}</b></div>
       </div>
       ${short ? `<p class="small" style="color:var(--bad);margin-bottom:12px">ব্যালেন্স কম। আরও ${taka(total - S.me.balance)} যোগ করুন।</p>
@@ -116,9 +158,10 @@
         <div class="kv">
           <div><span>অর্ডার নং</span><b>${esc(o.orderNo)}</b></div>
           <div><span>সার্ভিস</span><b>${esc(o.title)}</b></div>
-          <div><span>${o.type === "freefire" ? "UID" : o.type === "bill" ? "অ্যাকাউন্ট" : "নম্বর"}</span><b>${esc(o.target)}</b></div>
+          <div><span>${o.type === "freefire" ? "Player ID" : o.type === "bill" ? "অ্যাকাউন্ট" : "নম্বর"}</span><b>${esc(o.target)}</b></div>
           ${o.fee ? `<div><span>চার্জ</span><b>${taka(o.fee)}</b></div>` : ""}
           <div><span>মোট</span><b>${taka(o.total)}</b></div>
+          ${o.cashback > 0 ? `<div><span>ক্যাশব্যাক</span><b style="color:var(--ok)">${o.cashbackPaid ? "+" + taka(o.cashback) + " যোগ হয়েছে ✓" : taka(o.cashback) + " (সফল হলে পাবেন)"}</b></div>` : ""}
           ${o.providerRef ? `<div><span>রেফারেন্স</span><b>${esc(o.providerRef)}</b></div>` : ""}
           ${o.note && o.status !== "success" ? `<div><span>নোট</span><b>${esc(o.note)}</b></div>` : ""}
         </div>
@@ -136,9 +179,11 @@
   async function home() {
     const first = S.me.name.split(" ")[0];
     const banners = S.banners.filter((b) => b.placement === "app");
-    const quick = [
-      ["recharge", "📱", "রিচার্জ", ""], ["packs", "📦", "ডাটা/মিনিট", ""], ["freefire", "💎", "ডায়মন্ড", "gold"], ["bills", "🧾", "বিল পে", ""],
-      ["wallet?add", "➕", "টাকা যোগ", ""], ["orders", "📋", "অর্ডার", ""], ["wallet", "🧮", "হিস্ট্রি", ""], ["profile", "🎁", "রেফার", "gold"]
+    const cats = S.cats.length ? S.cats : [
+      { title: "রিচার্জ", icon: "📱", link: "#/recharge" }, { title: "ডাটা/মিনিট", icon: "📦", link: "#/packs" },
+      { title: "গেম টপআপ", icon: "🎮", link: "#/freefire" }, { title: "বিল পে", icon: "🧾", link: "#/bills" },
+      { title: "টাকা যোগ", icon: "➕", link: "#/wallet?add" }, { title: "অর্ডার", icon: "📋", link: "#/orders" },
+      { title: "হিস্ট্রি", icon: "🧮", link: "#/wallet" }, { title: "রেফার", icon: "🎁", link: "#/profile" }
     ];
     view.innerHTML = `
       <div class="hello"><small>স্বাগতম 👋</small><h2>${esc(first)}</h2></div>
@@ -147,13 +192,13 @@
         <div class="amt" data-bal>${taka(S.me.balance)}</div>
         <div class="acts"><a class="btn solid" href="#/wallet">+ টাকা যোগ করুন</a><a class="btn" href="#/orders">অর্ডার হিস্ট্রি</a></div>
       </div>
-      <div class="quick">${quick.map(([k, i, l, c]) => `<a class="q ${c}" href="#/${k}"><i>${i}</i>${l}</a>`).join("")}</div>
+      <div class="quick">${cats.map((c) => `<a class="q" href="${esc(c.link)}"><i${c.color ? ` style="background:color-mix(in srgb, ${esc(c.color)} 24%, transparent)"` : ""}>${vis(c.image, c.icon)}</i>${esc(c.title)}</a>`).join("")}</div>
       ${banners.length ? `<div class="sec-title"><h3>অফার</h3></div><div class="banners">${banners.map((b) => {
         const tag = b.link ? "a" : "div";
         return `<${tag}${b.link ? ` href="${esc(b.link)}"` : ""} class="bn s${b.style}${b.imageId ? " img" : ""}"${b.imageId ? ` style="background-image:url('/api/media/${esc(b.imageId)}')"` : ""}><b>${esc(b.title)}</b><span>${esc(b.text)}</span></${tag}>`;
       }).join("")}</div>` : ""}
       ${S.services.length ? `<div class="sec-title"><h3>বিল পেমেন্ট</h3><a href="#/bills">সব দেখুন</a></div>
-        <div class="bill-grid">${S.services.slice(0, 4).map((s) => `<button class="bill" data-bill="${esc(s.key)}"><i>${esc(s.icon)}</i><b>${esc(s.name)}</b></button>`).join("")}</div>` : ""}
+        <div class="bill-grid">${S.services.slice(0, 4).map((s) => `<button class="bill" data-bill="${esc(s.key)}"><i>${vis(s.image, s.icon)}</i><b>${esc(s.name)}</b></button>`).join("")}</div>` : ""}
       <div class="sec-title"><h3>সাম্প্রতিক অর্ডার</h3><a href="#/orders">সব দেখুন</a></div>
       <div id="recent">${skeleton(2)}</div>`;
     view.querySelectorAll("[data-bill]").forEach((b) => b.addEventListener("click", () => billSheet(b.dataset.bill)));
@@ -236,9 +281,9 @@
         ops().map((o) => `<button class="chip ${S.packOp === o.id ? "on" : ""}" data-o="${esc(o.id)}"><i style="background:${esc(o.color)}"></i>${esc(o.short || o.name)}</button>`).join("");
       const list = S.packs.filter((p) => p.type === S.packType && (S.packOp === "all" || p.operator === S.packOp));
       $("plist").innerHTML = list.length ? list.map((p) => `
-        <button class="pk" data-id="${p._id}">${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ""}
-          ${opDot(p.operator)}
-          <div class="info"><b>${esc(p.title)}</b><small>${esc([p.validity, p.detail].filter(Boolean).join(" · "))}</small></div>
+        <button class="pk" data-id="${p._id}">${tagOf(p) ? `<span class="tag${p.hot ? " hot" : ""}">${esc(tagOf(p))}</span>` : ""}
+          ${p.image ? `<div class="op-dot img"><img src="${media(p.image)}" alt=""></div>` : opDot(p.operator)}
+          <div class="info"><b>${esc(p.title)}</b><small>${esc([p.validity, p.detail].filter(Boolean).join(" · "))}</small>${cbBadge(p)}</div>
           <div class="price">${p.oldPrice > p.price ? `<s>${taka(p.oldPrice)}</s>` : ""}${taka(p.price)}</div>
         </button>`).join("") : empty("📭", "এই ক্যাটাগরিতে কোনো প্যাকেজ নেই");
     };
@@ -253,43 +298,65 @@
       if (!validPhone(phone)) { num.focus(); return toast("আগে সঠিক মোবাইল নম্বর দিন", "err"); }
       S.phone = phone; try { localStorage.setItem("rs_phone", phone); } catch (_) {}
       checkout({
-        title: p.title, amount: p.price,
+        title: p.title, amount: p.price, cashback: cbOf(p),
         rows: [["নম্বর", phone], ["অপারেটর", (op(p.operator) || {}).name || "—"], ["মেয়াদ", p.validity || "—"]],
         payload: { type: "package", packageId: p._id, target: phone }
       });
     });
   }
 
-  // ================= FREE FIRE =================
+  // ================= GAMES (Free Fire, PUBG, ...) =================
   async function freefire() {
     await loadPacks();
-    const list = S.packs.filter((p) => p.type === "freefire");
+    const gid = new URLSearchParams((location.hash.split("?")[1]) || "").get("g");
+    const game = gid && S.games.find((g) => g._id === gid);
+    if (!game) return gamePicker();
+    gameDetail(game);
+  }
+
+  function gamePicker() {
     view.innerHTML = `
+      <div class="sec-title" style="margin-top:6px"><h3>গেম বেছে নিন</h3></div>
+      ${S.games.length ? `<div class="game-grid">${S.games.map((g) => {
+        const n = S.packs.filter((p) => p.type === "freefire" && p.gameId === g._id).length;
+        return `<a class="game" href="#/freefire?g=${esc(g._id)}"><div class="gimg">${vis(g.image, g.icon)}</div><b>${esc(g.name)}</b><small>${n} টি প্যাকেজ</small></a>`;
+      }).join("")}</div>` : empty("🎮", "এখন কোনো গেম চালু নেই")}`;
+  }
+
+  function gameDetail(g) {
+    const list = S.packs.filter((p) => p.type === "freefire" && p.gameId === g._id);
+    const key = "rs_uid_" + g.key;
+    let saved = ""; try { saved = localStorage.getItem(key) || ""; } catch (_) {}
+    view.innerHTML = `
+      <a href="#/freefire" class="back-link">← সব গেম</a>
+      <div class="game-head"><div class="gimg">${vis(g.image, g.icon)}</div><div><h2>${esc(g.name)}</h2><small class="muted">${esc(g.currency)} টপআপ</small></div></div>
       <div class="card panel">
-        <div class="field" style="margin-bottom:6px"><label for="uid">Free Fire UID</label>
-          <input id="uid" inputmode="numeric" maxlength="15" placeholder="যেমন 1234567890" value="${esc(S.uid || "")}"></div>
-        <p class="small muted">গেমের প্রোফাইল থেকে UID দেখে নিন। ভুল UID দিলে ডায়মন্ড ফেরত পাওয়া যাবে না।</p>
+        <div class="field" style="margin-bottom:6px"><label for="uid">${esc(g.idLabel)}</label>
+          <input id="uid" inputmode="numeric" maxlength="15" placeholder="আপনার ${esc(g.idLabel)} লিখুন" value="${esc(saved)}"></div>
+        <p class="small muted">ভুল ID দিলে ${esc(g.currency)} ফেরত পাওয়া যাবে না। ভালোভাবে মিলিয়ে নিন।</p>
       </div>
       <div class="dgrid">${list.length ? list.map((p) => `
-        <button class="dg" data-id="${p._id}">${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ""}
-          <div class="gem">💎</div><b>${esc(p.title.replace(/💎/g, "").trim())}</b>
+        <button class="dg" data-id="${p._id}">${tagOf(p) ? `<span class="tag${p.hot ? " hot" : ""}">${esc(tagOf(p))}</span>` : ""}
+          <div class="gem">${p.image ? `<img class="vis" src="${media(p.image)}" alt="" loading="lazy">` : esc(g.icon)}</div>
+          <b>${esc(p.title)}</b>
           ${p.validity ? `<small class="muted">${esc(p.validity)}</small>` : ""}
-          <div class="price">${taka(p.price)}</div></button>`).join("") : ""}</div>
-      ${list.length ? "" : empty("💎", "এখন কোনো প্যাকেজ নেই")}`;
+          <div class="price">${p.oldPrice > p.price ? `<s>${taka(p.oldPrice)}</s> ` : ""}${taka(p.price)}</div>
+          ${cbBadge(p)}</button>`).join("") : ""}</div>
+      ${list.length ? "" : empty("🎮", "এই গেমে এখন কোনো প্যাকেজ নেই")}`;
     const uid = $("uid");
     uid.addEventListener("input", () => { uid.value = uid.value.replace(/\D/g, ""); });
     view.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("click", () => {
       const p = list.find((x) => x._id === b.dataset.id);
-      if (!/^\d{5,15}$/.test(uid.value)) { uid.focus(); return toast("সঠিক Free Fire UID দিন", "err"); }
-      S.uid = uid.value; try { localStorage.setItem("rs_uid", uid.value); } catch (_) {}
-      checkout({ title: p.title, amount: p.price, rows: [["UID", uid.value]], payload: { type: "freefire", packageId: p._id, target: uid.value } });
+      if (!/^\d{5,15}$/.test(uid.value)) { uid.focus(); return toast("সঠিক " + g.idLabel + " দিন", "err"); }
+      try { localStorage.setItem(key, uid.value); } catch (_) {}
+      checkout({ title: g.name + " — " + p.title, amount: p.price, cashback: cbOf(p), rows: [[g.idLabel, uid.value]], payload: { type: "freefire", packageId: p._id, target: uid.value } });
     }));
   }
 
   // ================= BILLS =================
   async function bills() {
     view.innerHTML = S.services.length
-      ? `<div class="bill-grid">${S.services.map((s) => `<button class="bill" data-bill="${esc(s.key)}"><i>${esc(s.icon)}</i><b>${esc(s.name)}</b><small>৳${s.min} - ৳${s.max}${s.feePercent ? ` · চার্জ ${s.feePercent}%` : ""}</small></button>`).join("")}</div>`
+      ? `<div class="bill-grid">${S.services.map((s) => `<button class="bill" data-bill="${esc(s.key)}"><i>${vis(s.image, s.icon)}</i><b>${esc(s.name)}</b><small>৳${s.min} - ৳${s.max}${s.feePercent ? ` · চার্জ ${s.feePercent}%` : ""}</small></button>`).join("")}</div>`
       : empty("🧾", "এখন কোনো বিল সার্ভিস চালু নেই");
     view.querySelectorAll("[data-bill]").forEach((b) => b.addEventListener("click", () => billSheet(b.dataset.bill)));
   }
@@ -298,7 +365,7 @@
     const s = S.services.find((x) => x.key === key);
     if (!s) return;
     sheet(`
-      <h3>${esc(s.icon)} ${esc(s.name)}</h3>
+      <h3>${vis(s.image, s.icon)} ${esc(s.name)}</h3>
       <div class="field"><label>${esc(s.accountLabel)}</label><input id="bAcc" maxlength="40" autocomplete="off"></div>
       <div class="field"><label>পরিমাণ (৳${s.min} - ৳${s.max})</label><input id="bAmt" type="number" inputmode="numeric" min="${s.min}" max="${s.max}"></div>
       <div class="field"><label>যোগাযোগের মোবাইল (ঐচ্ছিক)</label><input id="bCon" type="tel" inputmode="numeric" maxlength="11" value="${esc(S.me.phone)}"></div>
@@ -401,14 +468,14 @@
     const u = S.me, c = S.site.contact;
     const link = `${location.origin}/login?ref=${u.referralCode}`;
     view.innerHTML = `
-      <div class="profile-top"><div class="avatar">${esc(u.name.slice(0, 1).toUpperCase())}</div><h2>${esc(u.name)}</h2><p class="muted">${esc(u.phone)}</p></div>
+      <div class="profile-top"><div class="avatar">${u.avatar ? `<img src="${media(u.avatar)}" alt="">` : esc(u.name.slice(0, 1).toUpperCase())}</div><h2>${esc(u.name)}</h2><p class="muted">${esc(u.phone)}</p></div>
       <div class="ref-box"><div><small class="muted">আপনার রেফার কোড</small><br><b>${esc(u.referralCode)}</b>${S.site.referral.bonus ? `<br><small class="muted">বন্ধু প্রথম ডিপোজিট করলে ${taka(S.site.referral.bonus)} বোনাস</small>` : ""}</div>
         <button class="btn btn-gold btn-sm" id="refCopy">লিংক কপি</button></div>
       <div class="menu" style="margin-top:10px">
         <a href="#/wallet"><i>💰</i>ওয়ালেট ও লেনদেন</a>
         <a href="#/orders"><i>📋</i>অর্ডার হিস্ট্রি</a>
         <a href="#/bills"><i>🧾</i>বিল পে</a>
-        <button id="editP"><i>✏️</i>প্রোফাইল এডিট</button>
+        <button id="editP"><i>✏️</i>প্রোফাইল, ছবি ও কালার</button>
         <button id="pwP"><i>🔑</i>পাসওয়ার্ড পরিবর্তন</button>
         ${c.whatsapp ? `<a href="https://wa.me/${esc(c.whatsapp.replace(/\D/g, ""))}" target="_blank" rel="noopener"><i>💬</i>WhatsApp সাপোর্ট</a>` : ""}
         ${c.phone ? `<a href="tel:${esc(c.phone)}"><i>📞</i>কল করুন: ${esc(c.phone)}</a>` : ""}
@@ -432,18 +499,44 @@
       pw.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
       setTimeout(() => pw.focus(), 250);
     }));
-    $("editP").addEventListener("click", () => sheet(`
-      <h3>প্রোফাইল এডিট</h3>
-      <div class="field"><label>নাম</label><input id="eN" value="${esc(u.name)}" maxlength="60"></div>
-      <div class="field"><label>ইমেইল</label><input id="eE" type="email" value="${esc(u.email)}"></div>
-      <button class="btn btn-primary btn-block" id="eGo">সেভ করুন</button>`, (el, close) => {
-      const go = el.querySelector("#eGo");
-      go.addEventListener("click", async () => {
-        btnBusy(go, true);
-        try { const r = await api("/api/me", { method: "PUT", body: { name: el.querySelector("#eN").value, email: el.querySelector("#eE").value } }); S.me = r.user; close(); toast("সেভ হয়েছে", "ok"); route(); }
-        catch (e) { btnBusy(go, false); toast(e.message, "err"); }
+    $("editP").addEventListener("click", () => {
+      const SW = ["#7c3aed", "#ec4899", "#ef4444", "#f97316", "#eab308", "#22c55e", "#0ea5e9", "#6366f1"];
+      let color = u.themeColor || "", avatar = u.avatar || "";
+      sheet(`
+        <h3>প্রোফাইল, ছবি ও কালার</h3>
+        <div class="upl-row"><div class="avatar sm" id="eAv">${avatar ? `<img src="${media(avatar)}" alt="">` : esc(u.name.slice(0, 1).toUpperCase())}</div>
+          <label class="btn btn-ghost btn-sm">📷 ছবি বদলান<input type="file" id="eFile" accept="image/*" hidden></label></div>
+        <div class="field"><label>নাম</label><input id="eN" value="${esc(u.name)}" maxlength="60"></div>
+        <div class="field"><label>ইমেইল</label><input id="eE" type="email" value="${esc(u.email)}"></div>
+        <div class="lbl" style="margin-bottom:8px">আমার অ্যাপের কালার</div>
+        <div class="swatches" id="eSw">${SW.map((c) => `<button type="button" class="sw ${c === color ? "on" : ""}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}
+          <input type="color" id="eCol" value="${color || S.site.theme.brand}" title="নিজের পছন্দ">
+          <button type="button" class="btn btn-ghost btn-sm" id="eRst">ডিফল্ট</button></div>
+        <button class="btn btn-primary btn-block" id="eGo" style="margin-top:16px">সেভ করুন</button>`, (el, close) => {
+        const setColor = (c) => { color = c; el.querySelectorAll(".sw").forEach((x) => x.classList.toggle("on", x.dataset.c === c)); S.me.themeColor = c; applyMyColor(); };
+        el.querySelector("#eSw").addEventListener("click", (e) => { const b = e.target.closest(".sw"); if (b) { setColor(b.dataset.c); el.querySelector("#eCol").value = b.dataset.c; } });
+        el.querySelector("#eCol").addEventListener("input", (e) => setColor(e.target.value));
+        el.querySelector("#eRst").addEventListener("click", () => setColor(""));
+        el.querySelector("#eFile").addEventListener("change", async (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          try {
+            const dataUrl = await shrink(f, 320, 0.85);
+            const r = await api("/api/me/avatar", { method: "POST", body: { dataUrl } });
+            avatar = r.user.avatar; S.me = r.user; applyMyColor();
+            el.querySelector("#eAv").innerHTML = `<img src="${media(avatar)}" alt="">`;
+            toast("ছবি আপলোড হয়েছে", "ok");
+          } catch (er) { toast(er.message, "err"); }
+        });
+        const go = el.querySelector("#eGo");
+        go.addEventListener("click", async () => {
+          btnBusy(go, true);
+          try {
+            const r = await api("/api/me", { method: "PUT", body: { name: el.querySelector("#eN").value, email: el.querySelector("#eE").value, themeColor: color, avatar } });
+            S.me = r.user; applyMyColor(); close(); toast("সেভ হয়েছে", "ok"); route();
+          } catch (er) { btnBusy(go, false); toast(er.message, "err"); }
+        });
       });
-    }));
+    });
     $("pwP").addEventListener("click", () => sheet(`
       <h3>পাসওয়ার্ড পরিবর্তন</h3>
       <div class="field"><label>বর্তমান পাসওয়ার্ড</label><input id="pC" type="password" autocomplete="current-password"></div>
