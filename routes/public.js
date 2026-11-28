@@ -1,18 +1,20 @@
 "use strict";
 
 const router = require("express").Router();
-const { Package, Service, Banner, Media } = require("../lib/models");
+const { Package, Service, Banner, Game, Category, Media } = require("../lib/models");
 const { getSite, publicView } = require("../lib/settings");
 const { wrap, isId } = require("../lib/util");
 
 // Everything the landing page / app needs in one request.
 router.get("/bootstrap", wrap(async (req, res) => {
   const site = await getSite();
-  const [banners, services] = await Promise.all([
+  const [banners, services, games, categories] = await Promise.all([
     Banner.find({ active: true }).sort({ sort: 1, createdAt: -1 }).lean(),
-    Service.find({ active: true }).sort({ sort: 1 }).lean()
+    Service.find({ active: true }).sort({ sort: 1 }).lean(),
+    Game.find({ active: true }).sort({ sort: 1 }).lean(),
+    Category.find({ active: true }).sort({ sort: 1 }).lean()
   ]);
-  res.json({ site: publicView(site), banners, services });
+  res.json({ site: publicView(site), banners, services, games, categories });
 }));
 
 router.get("/packages", wrap(async (req, res) => {
