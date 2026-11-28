@@ -12,7 +12,7 @@
     return b.imageId ? ` style="background-image:url('/api/media/${esc(b.imageId)}')"` : "";
   }
 
-  function render({ site, banners, services }) {
+  function render({ site, banners, services, categories = [] }) {
     setSite(site);
     document.title = site.brand.name + " — " + site.brand.tagline;
 
@@ -33,13 +33,37 @@
     $("stats").innerHTML = site.stats.map((s) =>
       `<div class="card stat reveal"><b class="grad-text">${esc(s.value)}</b><span>${esc(s.label)}</span></div>`).join("");
 
-    const core = [
-      { icon: "📱", name: "মোবাইল রিচার্জ", text: "সব অপারেটরে প্রিপেইড ও পোস্টপেইড রিচার্জ।" },
-      { icon: "📦", name: "ডাটা ও মিনিট", text: "জিপি, রবি, বাংলালিংক, এয়ারটেল, টেলিটক অফার।" },
-      { icon: "💎", name: "ফ্রি ফায়ার ডায়মন্ড", text: "UID দিয়ে ইনস্ট্যান্ট ডায়মন্ড ও মেম্বারশিপ।" }
-    ].concat(services.map((s) => ({ icon: s.icon, name: s.name, text: s.accountLabel + " দিয়ে পরিশোধ করুন।" })));
+    const img = (id, icon) => (id ? `<img src="/api/media/${esc(id)}" alt="" loading="lazy">` : esc(icon));
+    const core = categories.filter((c) => c.landing).map((c) => ({ icon: c.icon, image: c.image, name: c.title, text: "" }))
+      .concat(services.map((s) => ({ icon: s.icon, image: s.image, name: s.name, text: s.accountLabel + " দিয়ে পরিশোধ করুন।" })));
     $("svcGrid").innerHTML = core.map((s) =>
-      `<a href="/login#register" class="card svc reveal"><div class="ic">${esc(s.icon)}</div><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p></a>`).join("");
+      `<a href="/login#register" class="card svc reveal"><div class="ic">${img(s.image, s.icon)}</div><h3>${esc(s.name)}</h3>${s.text ? `<p>${esc(s.text)}</p>` : ""}</a>`).join("");
+
+    // sections the admin can switch off
+    const sec = site.sections || {};
+    [["stats", "stats"], ["services", "services"], ["features", "features"], ["steps", "how"], ["faq", "faq"]].forEach(([k, id]) => { $(id).hidden = sec[k] === false; });
+    $("stepsList").innerHTML = (site.steps || []).map((s, i) =>
+      `<div class="step reveal"><b>${i + 1}</b><h3>${esc(s.title)}</h3><p class="muted">${esc(s.text)}</p></div>`).join("");
+
+    // hero banner image / video
+    const hm = site.heroMedia || {};
+    const box = $("heroMedia");
+    let node = null;
+    if (hm.type === "image" && hm.image) {
+      node = document.createElement("img"); node.src = "/api/media/" + hm.image; node.alt = "";
+    } else if (hm.type === "video" && hm.videoUrl) {
+      const yt = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/.exec(hm.videoUrl);
+      if (yt) {
+        node = document.createElement("iframe");
+        node.src = "https://www.youtube-nocookie.com/embed/" + yt[1] + "?rel=0";
+        node.allow = "autoplay; encrypted-media; picture-in-picture"; node.allowFullscreen = true; node.title = "video";
+      } else {
+        node = document.createElement("video");
+        node.src = hm.videoUrl; node.muted = true; node.loop = true; node.autoplay = true; node.playsInline = true; node.controls = true;
+        if (hm.image) node.poster = "/api/media/" + hm.image;
+      }
+    }
+    if (node) { box.innerHTML = ""; box.appendChild(node); box.hidden = false; $("heroArt").hidden = true; }
 
     const lb = banners.filter((b) => b.placement === "landing");
     if (lb.length) {
