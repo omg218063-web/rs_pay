@@ -4,12 +4,12 @@ const router = require("express").Router();
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const {
-  User, Package, Service, Banner, Order, Deposit, WalletTx, Media, credit
+  User, Package, Service, Banner, Game, Category, Order, Deposit, WalletTx, Media, credit, payCashback, reverseCashback
 } = require("../lib/models");
 const { getSite, saveSite } = require("../lib/settings");
 const providers = require("../lib/providers");
 const {
-  wrap, money, str, isId, bool, int, escRe, httpError
+  wrap, money, str, isId, bool, int, escRe, httpError, hex
 } = require("../lib/util");
 
 const adminLimiter = rateLimit({
@@ -32,8 +32,10 @@ router.post("/login", adminLimiter, (req, res) => {
   const pass = process.env.ADMIN_PASSWORD;
   if (!pass || pass.length < 12) return res.status(500).json({ error: "ADMIN_PASSWORD সেট করা নেই (কমপক্ষে ১২ অক্ষর)" });
   if (!safeEqual(req.body && req.body.password, pass)) return res.status(401).json({ error: "পাসওয়ার্ড ভুল" });
+  const keepUser = req.session.userId;
   req.session.regenerate((err) => {
     if (err) return res.status(500).json({ error: "সার্ভার সমস্যা" });
+    if (keepUser) req.session.userId = keepUser;
     req.session.isAdmin = true;
     res.json({ ok: true });
   });
@@ -42,10 +44,8 @@ router.post("/login", adminLimiter, (req, res) => {
 router.get("/me", requireAdmin, (req, res) => res.json({ ok: true, providerMode: providers.mode() }));
 
 router.post("/logout", requireAdmin, (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie("rs_pay_session");
-    res.json({ ok: true });
-  });
+  delete req.session.isAdmin; // user login (if any) stays
+  req.session.save(() => res.json({ ok: true }));
 });
 
 router.use(requireAdmin);
@@ -175,8 +175,13 @@ router.patch("/orders/:id", wrap(async (req, res) => {
     { _id: req.params.id, status: { $in: r.from } }, set, { new: true }
   );
   if (!o) throw httpError(409, "এই অর্ডারের স্ট্যাটাস আগেই বদলে গেছে");
-  if (r.refund) await credit(o.user, o.total, "refund", o.orderNo, note || "Admin refund");
-  res.json({ order: o });
+  let out = o;
+  if (r.refund) {
+    await credit(o.user, o.total, "refund", o.orderNo, note || "Admin refund");
+    if (action === "refund") await reverseCashback(o);
+  }
+  if (action === "success") out = await payCashback(o);
+  res.json({ order: out });
 }));
 
 // ---------------- DEPOSITS ----------------
@@ -258,6 +263,11 @@ crud("/packages", Package, (b) => ({
   price: money(b.price),
   oldPrice: money(b.oldPrice) || 0,
   tag: str(b.tag, 24),
+  hot: bool(b.hot, false),
+  image: isId(b.image) ? String(b.image) : "",
+  gameId: isId(b.gameId) ? String(b.gameId) : "",
+  cashbackType: ["none", "fixed", "percent"].includes(b.cashbackType) ? b.cashbackType : "none",
+  cashbackValue: Math.min(100000, Math.max(0, money(b.cashbackValue) || 0)),
   code: str(b.code, 80),
   active: bool(b.active, true),
   sort: int(b.sort, 0)
@@ -268,11 +278,34 @@ crud("/services", Service, (b) => ({
   name: str(b.name, 60),
   nameEn: str(b.nameEn, 60),
   icon: str(b.icon, 8) || "💡",
+  image: isId(b.image) ? String(b.image) : "",
   accountLabel: str(b.accountLabel, 60) || "Account No.",
   min: int(b.min, 10, 1),
   max: int(b.max, 50000, 1),
   feePercent: Math.min(20, Math.max(0, Number(b.feePercent) || 0)),
   code: str(b.code, 80),
+  active: bool(b.active, true),
+  sort: int(b.sort, 0)
+}), { sort: 1 });
+
+crud("/games", Game, (b) => ({
+  key: str(b.key, 30).toLowerCase().replace(/[^a-z0-9_-]/g, ""),
+  name: str(b.name, 60),
+  icon: str(b.icon, 8) || "🎮",
+  image: isId(b.image) ? String(b.image) : "",
+  currency: str(b.currency, 30) || "ডায়মন্ড",
+  idLabel: str(b.idLabel, 40) || "Player ID",
+  active: bool(b.active, true),
+  sort: int(b.sort, 0)
+}), { sort: 1 });
+
+crud("/categories", Category, (b) => ({
+  title: str(b.title, 40),
+  icon: str(b.icon, 8) || "⭐",
+  image: isId(b.image) ? String(b.image) : "",
+  link: /^(#\/[a-z?=&]+|\/|https:\/\/)/.test(str(b.link, 300)) ? str(b.link, 300) : "#/home",
+  color: hex(str(b.color, 7), ""),
+  landing: bool(b.landing, false),
   active: bool(b.active, true),
   sort: int(b.sort, 0)
 }), { sort: 1 });
